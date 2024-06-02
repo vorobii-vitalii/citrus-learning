@@ -1,8 +1,6 @@
 name: Build account balance service
 on:
   push:
-    paths:
-      - "account-balance-service/**"
     branches-ignore:
       - master
 jobs:
