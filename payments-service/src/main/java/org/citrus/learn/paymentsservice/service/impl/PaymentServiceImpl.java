@@ -42,8 +42,11 @@ public class PaymentServiceImpl implements PaymentService {
 		return transactionRepository.findById(transactionId)
 				.doOnNext(transaction -> log.info("Found existing transaction {}", transaction))
 				.map(Transaction::getStatus)
-				.switchIfEmpty(executeTransaction(paymentRequest).flatMap(status -> saveTransaction(status, transactionId))
-						.map(Transaction::getStatus));
+				.switchIfEmpty(Mono.defer(
+						() -> executeTransaction(paymentRequest)
+								.flatMap(status -> saveTransaction(status, transactionId))
+								.map(Transaction::getStatus)
+				));
 	}
 
 	private Mono<Transaction> saveTransaction(TransactionStatus status, UUID transactionId) {
