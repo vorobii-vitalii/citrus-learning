@@ -57,5 +57,6 @@ dependencies {
 }
 
 tasks.named('test') {
+    testLogging.showStandardStreams = true
     useJUnitPlatform()
 }

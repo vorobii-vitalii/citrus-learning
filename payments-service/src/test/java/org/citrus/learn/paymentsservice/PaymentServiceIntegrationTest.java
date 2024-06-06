@@ -9,6 +9,7 @@ import java.util.UUID;
 
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
+import org.citrus.learn.paymentsservice.actions.AccountBalanceDatabaseActions;
 import org.citrus.learn.paymentsservice.actions.PaymentServiceActions;
 import org.citrus.learn.paymentsservice.utils.JavaOptionsCreator;
 import org.citrus.learn.paymentsservice.utils.LocalJavaContainer;
@@ -77,12 +78,14 @@ public class PaymentServiceIntegrationTest {
 
 	private static HikariDataSource dataSource;
 	private static PaymentServiceActions paymentServiceActions;
+	private static AccountBalanceDatabaseActions accountBalanceDatabaseActions;
 
 	@BeforeAll
 	static void init() {
 		createTopics(PAYMENT_REQUESTS, PAYMENT_RESPONSE);
 		initDataSource();
 		paymentServiceActions = new PaymentServiceActions(kafka.getBootstrapServers(), PAYMENT_REQUESTS, PAYMENT_RESPONSE);
+		accountBalanceDatabaseActions = new AccountBalanceDatabaseActions(dataSource);
 	}
 
 	private static void initDataSource() {
@@ -111,8 +114,8 @@ public class PaymentServiceIntegrationTest {
 			builder.setVariable("transactionAmount", "100");
 			builder.setVariable("expectedTransactionStatus", "SENDER_NOT_FOUND");
 		});
+		actions.$(accountBalanceDatabaseActions.cleanExistingBalances());
 		actions.$(sql().dataSource(dataSource)
-				.statement("delete from user_balance")
 				.statement("delete from transactions")
 				.statement("delete from user_info"));
 		paymentServiceActions.sendPaymentRequest();
@@ -130,13 +133,9 @@ public class PaymentServiceIntegrationTest {
 			builder.setVariable("fromAccountBalanceBeforeTransaction", "900");
 			builder.setVariable("expectedTransactionStatus", "RECEIVER_NOT_FOUND");
 		});
-		actions.$(sql().dataSource(dataSource)
-				.statement("delete from user_balance")
-				.statement("delete from transactions")
-				.statement("delete from user_info")
-				.statement("insert into user_balance(user_id, user_balance) "
-						+ "values (${fromAccountId}, ${fromAccountBalanceBeforeTransaction})")
-		);
+		actions.$(accountBalanceDatabaseActions.cleanExistingBalances());
+		actions.$(accountBalanceDatabaseActions.insertBalanceForSender());
+		actions.$(sql().dataSource(dataSource).statement("delete from user_info"));
 		paymentServiceActions.sendPaymentRequest();
 		paymentServiceActions.expectResponseWithCorrectStatus();
 	}
@@ -153,14 +152,12 @@ public class PaymentServiceIntegrationTest {
 			builder.setVariable("toAccountBalanceBeforeTransaction", "900");
 			builder.setVariable("expectedTransactionStatus", "INSUFFICIENT_FUNDS");
 		});
+		actions.$(accountBalanceDatabaseActions.cleanExistingBalances());
+		actions.$(accountBalanceDatabaseActions.insertBalanceForSender());
+		actions.$(accountBalanceDatabaseActions.insertBalanceForReceiver());
 		actions.$(sql().dataSource(dataSource)
-				.statement("delete from user_balance")
 				.statement("delete from transactions")
 				.statement("delete from user_info")
-				.statement("insert into user_balance(user_id, user_balance) "
-						+ "values (${fromAccountId}, ${fromAccountBalanceBeforeTransaction})")
-				.statement("insert into user_balance(user_id, user_balance) "
-						+ "values (${toAccountId}, ${toAccountBalanceBeforeTransaction})")
 		);
 		paymentServiceActions.sendPaymentRequest();
 		paymentServiceActions.expectResponseWithCorrectStatus();
@@ -178,14 +175,12 @@ public class PaymentServiceIntegrationTest {
 			builder.setVariable("toAccountBalanceBeforeTransaction", "900");
 			builder.setVariable("expectedTransactionStatus", "SENDER_BLOCKED");
 		});
+		actions.$(accountBalanceDatabaseActions.cleanExistingBalances());
+		actions.$(accountBalanceDatabaseActions.insertBalanceForSender());
+		actions.$(accountBalanceDatabaseActions.insertBalanceForReceiver());
 		actions.$(sql().dataSource(dataSource)
-				.statement("delete from user_balance")
 				.statement("delete from transactions")
 				.statement("delete from user_info")
-				.statement("insert into user_balance(user_id, user_balance) "
-						+ "values (${fromAccountId}, ${fromAccountBalanceBeforeTransaction})")
-				.statement("insert into user_balance(user_id, user_balance) "
-						+ "values (${toAccountId}, ${toAccountBalanceBeforeTransaction})")
 				.statement("insert into user_info(user_id, is_blocked) "
 						+ "values (${fromAccountId}, true)")
 				.statement("insert into user_info(user_id, is_blocked) "
@@ -207,14 +202,12 @@ public class PaymentServiceIntegrationTest {
 			builder.setVariable("toAccountBalanceBeforeTransaction", "900");
 			builder.setVariable("expectedTransactionStatus", "RECEIVER_BLOCKED");
 		});
+		actions.$(accountBalanceDatabaseActions.cleanExistingBalances());
+		actions.$(accountBalanceDatabaseActions.insertBalanceForSender());
+		actions.$(accountBalanceDatabaseActions.insertBalanceForReceiver());
 		actions.$(sql().dataSource(dataSource)
-				.statement("delete from user_balance")
 				.statement("delete from transactions")
 				.statement("delete from user_info")
-				.statement("insert into user_balance(user_id, user_balance) "
-						+ "values (${fromAccountId}, ${fromAccountBalanceBeforeTransaction})")
-				.statement("insert into user_balance(user_id, user_balance) "
-						+ "values (${toAccountId}, ${toAccountBalanceBeforeTransaction})")
 				.statement("insert into user_info(user_id, is_blocked) "
 						+ "values (${fromAccountId}, false)")
 				.statement("insert into user_info(user_id, is_blocked) "
@@ -236,14 +229,12 @@ public class PaymentServiceIntegrationTest {
 			builder.setVariable("toAccountBalanceBeforeTransaction", "900");
 			builder.setVariable("expectedTransactionStatus", "SUCCESS");
 		});
+		actions.$(accountBalanceDatabaseActions.cleanExistingBalances());
+		actions.$(accountBalanceDatabaseActions.insertBalanceForSender());
+		actions.$(accountBalanceDatabaseActions.insertBalanceForReceiver());
 		actions.$(sql().dataSource(dataSource)
-				.statement("delete from user_balance")
 				.statement("delete from transactions")
 				.statement("delete from user_info")
-				.statement("insert into user_balance(user_id, user_balance) "
-						+ "values (${fromAccountId}, ${fromAccountBalanceBeforeTransaction})")
-				.statement("insert into user_balance(user_id, user_balance) "
-						+ "values (${toAccountId}, ${toAccountBalanceBeforeTransaction})")
 				.statement("insert into user_info(user_id, is_blocked) "
 						+ "values (${fromAccountId}, false)")
 				.statement("insert into user_info(user_id, is_blocked) "
