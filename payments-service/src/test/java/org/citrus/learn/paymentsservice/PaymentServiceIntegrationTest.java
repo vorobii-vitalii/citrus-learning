@@ -2,26 +2,20 @@ package org.citrus.learn.paymentsservice;
 
 import static org.apache.kafka.clients.admin.AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG;
 import static org.citrusframework.actions.ExecuteSQLAction.Builder.sql;
-import static org.citrusframework.actions.ReceiveMessageAction.Builder.receive;
-import static org.citrusframework.actions.SendMessageAction.Builder.send;
 
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
+import org.citrus.learn.paymentsservice.actions.PaymentServiceActions;
 import org.citrus.learn.paymentsservice.utils.JavaOptionsCreator;
 import org.citrus.learn.paymentsservice.utils.LocalJavaContainer;
 import org.citrusframework.TestActionRunner;
 import org.citrusframework.annotations.CitrusResource;
 import org.citrusframework.annotations.CitrusTest;
 import org.citrusframework.junit.jupiter.CitrusExtension;
-import org.citrusframework.kafka.endpoint.KafkaEndpoint;
-import org.citrusframework.kafka.endpoint.KafkaEndpointBuilder;
-import org.citrusframework.kafka.message.KafkaMessage;
-import org.citrusframework.kafka.message.KafkaMessageHeaders;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,8 +36,6 @@ import com.zaxxer.hikari.HikariDataSource;
 @Testcontainers
 @ExtendWith(CitrusExtension.class)
 public class PaymentServiceIntegrationTest {
-	public static final String REPLY_TO = "kafka_replyTopic";
-	public static final int TIMEOUT_MS = 10000;
 	private static final Logger LOGGER = LoggerFactory.getLogger(PaymentServiceIntegrationTest.class);
 	private static final String DATABASE_NAME = "foo";
 	private static final String USERNAME = "foo";
@@ -84,15 +76,13 @@ public class PaymentServiceIntegrationTest {
 			.withLogConsumer(new Slf4jLogConsumer(LOGGER).withPrefix("payment-service"));
 
 	private static HikariDataSource dataSource;
-	private static KafkaEndpoint requestsTopicEndpoint;
-	private static KafkaEndpoint responsesTopicEndpoint;
+	private static PaymentServiceActions paymentServiceActions;
 
 	@BeforeAll
 	static void init() {
 		createTopics(PAYMENT_REQUESTS, PAYMENT_RESPONSE);
 		initDataSource();
-		requestsTopicEndpoint = new KafkaEndpointBuilder().server(kafka.getBootstrapServers()).topic(PAYMENT_REQUESTS).build();
-		responsesTopicEndpoint = new KafkaEndpointBuilder().server(kafka.getBootstrapServers()).topic(PAYMENT_RESPONSE).build();
+		paymentServiceActions = new PaymentServiceActions(kafka.getBootstrapServers(), PAYMENT_REQUESTS, PAYMENT_RESPONSE);
 	}
 
 	private static void initDataSource() {
@@ -119,30 +109,14 @@ public class PaymentServiceIntegrationTest {
 			builder.setVariable("fromAccountId", "1");
 			builder.setVariable("toAccountId", "2");
 			builder.setVariable("transactionAmount", "100");
+			builder.setVariable("expectedTransactionStatus", "SENDER_NOT_FOUND");
 		});
 		actions.$(sql().dataSource(dataSource)
 				.statement("delete from user_balance")
 				.statement("delete from transactions")
 				.statement("delete from user_info"));
-		actions.$(send(requestsTopicEndpoint)
-				.message(new KafkaMessage("""
-						{
-							"transactionId": "${transactionId}",
-							"fromAccountId": ${fromAccountId},
-							"toAccountId": ${toAccountId},
-							"amount": ${transactionAmount}
-						}
-						""")
-						.setHeader(REPLY_TO, PAYMENT_RESPONSE)));
-
-		actions.$(receive(responsesTopicEndpoint).timeout(TIMEOUT_MS)
-				.message(new KafkaMessage("""
-						{
-							"transactionId": "${transactionId}",
-							"transactionStatus": "SENDER_NOT_FOUND"
-						}
-						"""))
-				.header(KafkaMessageHeaders.TOPIC, PAYMENT_RESPONSE));
+		paymentServiceActions.sendPaymentRequest();
+		paymentServiceActions.expectResponseWithCorrectStatus();
 	}
 
 	@Test
@@ -154,6 +128,7 @@ public class PaymentServiceIntegrationTest {
 			builder.setVariable("toAccountId", "2");
 			builder.setVariable("transactionAmount", "100");
 			builder.setVariable("fromAccountBalanceBeforeTransaction", "900");
+			builder.setVariable("expectedTransactionStatus", "RECEIVER_NOT_FOUND");
 		});
 		actions.$(sql().dataSource(dataSource)
 				.statement("delete from user_balance")
@@ -162,25 +137,8 @@ public class PaymentServiceIntegrationTest {
 				.statement("insert into user_balance(user_id, user_balance) "
 						+ "values (${fromAccountId}, ${fromAccountBalanceBeforeTransaction})")
 		);
-		actions.$(send(requestsTopicEndpoint)
-				.message(new KafkaMessage("""
-						{
-							"transactionId": "${transactionId}",
-							"fromAccountId": ${fromAccountId},
-							"toAccountId": ${toAccountId},
-							"amount": ${transactionAmount}
-						}
-						""")
-						.setHeader(REPLY_TO, PAYMENT_RESPONSE)));
-
-		actions.$(receive(responsesTopicEndpoint).timeout(TIMEOUT_MS)
-				.message(new KafkaMessage("""
-						{
-							"transactionId": "${transactionId}",
-							"transactionStatus": "RECEIVER_NOT_FOUND"
-						}
-						"""))
-				.header(KafkaMessageHeaders.TOPIC, PAYMENT_RESPONSE));
+		paymentServiceActions.sendPaymentRequest();
+		paymentServiceActions.expectResponseWithCorrectStatus();
 	}
 
 	@Test
@@ -193,6 +151,7 @@ public class PaymentServiceIntegrationTest {
 			builder.setVariable("transactionAmount", "100");
 			builder.setVariable("fromAccountBalanceBeforeTransaction", "40");
 			builder.setVariable("toAccountBalanceBeforeTransaction", "900");
+			builder.setVariable("expectedTransactionStatus", "INSUFFICIENT_FUNDS");
 		});
 		actions.$(sql().dataSource(dataSource)
 				.statement("delete from user_balance")
@@ -203,25 +162,8 @@ public class PaymentServiceIntegrationTest {
 				.statement("insert into user_balance(user_id, user_balance) "
 						+ "values (${toAccountId}, ${toAccountBalanceBeforeTransaction})")
 		);
-		actions.$(send(requestsTopicEndpoint)
-				.message(new KafkaMessage("""
-						{
-							"transactionId": "${transactionId}",
-							"fromAccountId": ${fromAccountId},
-							"toAccountId": ${toAccountId},
-							"amount": ${transactionAmount}
-						}
-						""")
-						.setHeader(REPLY_TO, PAYMENT_RESPONSE)));
-
-		actions.$(receive(responsesTopicEndpoint).timeout(TIMEOUT_MS)
-				.message(new KafkaMessage("""
-						{
-							"transactionId": "${transactionId}",
-							"transactionStatus": "INSUFFICIENT_FUNDS"
-						}
-						"""))
-				.header(KafkaMessageHeaders.TOPIC, PAYMENT_RESPONSE));
+		paymentServiceActions.sendPaymentRequest();
+		paymentServiceActions.expectResponseWithCorrectStatus();
 	}
 
 	@Test
@@ -234,6 +176,7 @@ public class PaymentServiceIntegrationTest {
 			builder.setVariable("transactionAmount", "100");
 			builder.setVariable("fromAccountBalanceBeforeTransaction", "130");
 			builder.setVariable("toAccountBalanceBeforeTransaction", "900");
+			builder.setVariable("expectedTransactionStatus", "SENDER_BLOCKED");
 		});
 		actions.$(sql().dataSource(dataSource)
 				.statement("delete from user_balance")
@@ -248,25 +191,8 @@ public class PaymentServiceIntegrationTest {
 				.statement("insert into user_info(user_id, is_blocked) "
 						+ "values (${toAccountId}, false)")
 		);
-		actions.$(send(requestsTopicEndpoint)
-				.message(new KafkaMessage("""
-						{
-							"transactionId": "${transactionId}",
-							"fromAccountId": ${fromAccountId},
-							"toAccountId": ${toAccountId},
-							"amount": ${transactionAmount}
-						}
-						""")
-						.setHeader(REPLY_TO, PAYMENT_RESPONSE)));
-
-		actions.$(receive(responsesTopicEndpoint).timeout(TIMEOUT_MS)
-				.message(new KafkaMessage("""
-						{
-							"transactionId": "${transactionId}",
-							"transactionStatus": "SENDER_BLOCKED"
-						}
-						"""))
-				.header(KafkaMessageHeaders.TOPIC, PAYMENT_RESPONSE));
+		paymentServiceActions.sendPaymentRequest();
+		paymentServiceActions.expectResponseWithCorrectStatus();
 	}
 
 	@Test
@@ -279,6 +205,7 @@ public class PaymentServiceIntegrationTest {
 			builder.setVariable("transactionAmount", "100");
 			builder.setVariable("fromAccountBalanceBeforeTransaction", "130");
 			builder.setVariable("toAccountBalanceBeforeTransaction", "900");
+			builder.setVariable("expectedTransactionStatus", "RECEIVER_BLOCKED");
 		});
 		actions.$(sql().dataSource(dataSource)
 				.statement("delete from user_balance")
@@ -293,25 +220,8 @@ public class PaymentServiceIntegrationTest {
 				.statement("insert into user_info(user_id, is_blocked) "
 						+ "values (${toAccountId}, true)")
 		);
-		actions.$(send(requestsTopicEndpoint)
-				.message(new KafkaMessage("""
-						{
-							"transactionId": "${transactionId}",
-							"fromAccountId": ${fromAccountId},
-							"toAccountId": ${toAccountId},
-							"amount": ${transactionAmount}
-						}
-						""")
-						.setHeader(REPLY_TO, PAYMENT_RESPONSE)));
-
-		actions.$(receive(responsesTopicEndpoint).timeout(TIMEOUT_MS)
-				.message(new KafkaMessage("""
-						{
-							"transactionId": "${transactionId}",
-							"transactionStatus": "RECEIVER_BLOCKED"
-						}
-						"""))
-				.header(KafkaMessageHeaders.TOPIC, PAYMENT_RESPONSE));
+		paymentServiceActions.sendPaymentRequest();
+		paymentServiceActions.expectResponseWithCorrectStatus();
 	}
 
 	@Test
@@ -324,6 +234,7 @@ public class PaymentServiceIntegrationTest {
 			builder.setVariable("transactionAmount", "100");
 			builder.setVariable("fromAccountBalanceBeforeTransaction", "130");
 			builder.setVariable("toAccountBalanceBeforeTransaction", "900");
+			builder.setVariable("expectedTransactionStatus", "SUCCESS");
 		});
 		actions.$(sql().dataSource(dataSource)
 				.statement("delete from user_balance")
@@ -338,25 +249,8 @@ public class PaymentServiceIntegrationTest {
 				.statement("insert into user_info(user_id, is_blocked) "
 						+ "values (${toAccountId}, false)")
 		);
-		actions.$(send(requestsTopicEndpoint)
-				.message(new KafkaMessage("""
-						{
-							"transactionId": "${transactionId}",
-							"fromAccountId": ${fromAccountId},
-							"toAccountId": ${toAccountId},
-							"amount": ${transactionAmount}
-						}
-						""")
-						.setHeader(REPLY_TO, PAYMENT_RESPONSE)));
-
-		actions.$(receive(responsesTopicEndpoint).timeout(TIMEOUT_MS)
-				.message(new KafkaMessage("""
-						{
-							"transactionId": "${transactionId}",
-							"transactionStatus": "SUCCESS"
-						}
-						"""))
-				.header(KafkaMessageHeaders.TOPIC, PAYMENT_RESPONSE));
+		paymentServiceActions.sendPaymentRequest();
+		paymentServiceActions.expectResponseWithCorrectStatus();
 	}
 
 }
