@@ -5,6 +5,7 @@ import static org.citrusframework.actions.ExecuteSQLAction.Builder.sql;
 import javax.sql.DataSource;
 
 import org.citrusframework.actions.ExecuteSQLAction;
+import org.citrusframework.actions.ExecuteSQLQueryAction;
 
 public class AccountBalanceDatabaseActions {
 
@@ -30,6 +31,22 @@ public class AccountBalanceDatabaseActions {
 				.dataSource(dataSource)
 				.statement("insert into user_balance(user_id, user_balance) "
 						+ "values (${toAccountId}, ${toAccountBalanceBeforeTransaction})");
+	}
+
+	public ExecuteSQLQueryAction.Builder verifyBalanceOfSender() {
+		return sql()
+				.dataSource(dataSource)
+				.query()
+				.statement("select u.user_balance as balance from user_balance u where user_id = ${fromAccountId}")
+				.validate("balance", "${expectedSenderBalanceAfterTransaction}");
+	}
+
+	public ExecuteSQLQueryAction.Builder verifyBalanceOfReceiver() {
+		return sql()
+				.dataSource(dataSource)
+				.query()
+				.statement("select u.user_balance as balance from user_balance u where user_id = ${toAccountId}")
+				.validate("balance", "${expectedReceiverBalanceAfterTransaction}");
 	}
 
 
