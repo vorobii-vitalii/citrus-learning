@@ -1,0 +1,22 @@
+type Position {
+    id: ID!
+    symbol: String!
+    quantity: Float!
+    purchasePrice: Float!
+    currentPrice: Float!
+    purchaseDate: String!
+}
+
+input ClientId {
+    id: String!
+}
+
+type PositionDetails {
+    positions: [Position!]
+    performance: Float!
+}
+
+type Query {
+    positionDetails(clientId: ClientId): [PositionDetails!]
+    position(clientId: ClientId, id: ID!): Position
+}
