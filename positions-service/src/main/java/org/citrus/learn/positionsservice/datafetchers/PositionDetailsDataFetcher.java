@@ -60,14 +60,17 @@ public class PositionDetailsDataFetcher {
 					if (positions.isEmpty()) {
 						return BigDecimal.ZERO;
 					}
-
 					return positions
 							.stream()
-							.map(v -> v.getCurrentPrice().divide(v.getPurchasePrice(), MATH_CONTEXT))
+							.map(this::calculatePositionPerformance)
 							.reduce(BigDecimal::add)
 							.orElse(BigDecimal.ZERO)
 							.divide(BigDecimal.valueOf(positions.size()), MATH_CONTEXT);
 				});
+	}
+
+	private BigDecimal calculatePositionPerformance(Position v) {
+		return v.getCurrentPrice().divide(v.getPurchasePrice(), MATH_CONTEXT);
 	}
 
 }

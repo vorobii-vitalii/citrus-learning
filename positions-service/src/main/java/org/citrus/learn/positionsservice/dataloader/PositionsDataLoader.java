@@ -35,16 +35,12 @@ public class PositionsDataLoader implements MappedBatchLoaderWithContext<String,
 			return clientIds.stream()
 					.collect(Collectors.toMap(v -> v, v -> List.of(
 							Position.newBuilder()
-									.id("1")
 									.symbol("XBT/USD")
-									.purchaseDate("2024/06/01")
 									.purchasePrice(BigDecimal.valueOf(123D))
 									.quantity(BigDecimal.valueOf(1))
 									.build(),
 							Position.newBuilder()
-									.id("2")
 									.symbol("RPL/USD")
-									.purchaseDate("2024/06/03")
 									.purchasePrice(BigDecimal.valueOf(99D))
 									.quantity(BigDecimal.valueOf(5))
 									.build()
@@ -54,17 +50,19 @@ public class PositionsDataLoader implements MappedBatchLoaderWithContext<String,
 				.collect(Collectors.toMap(Map.Entry::getKey, v -> {
 					try {
 						return positionsEnrichers.stream()
-								.filter(i -> i.shouldBeApplied((PositionDetailsLoadContext) environment.getKeyContexts().get(v.getKey())))
+								.filter(i -> i.shouldBeApplied(getContext(environment, v.getKey())))
 								.reduce(CompletableFuture.completedFuture(v.getValue()),
-										(future, enricher) -> enricher.enrich(future,
-												(PositionDetailsLoadContext) environment.getKeyContexts().get(v.getKey()))
-										, (a, b) -> b)
+										(future, enricher) -> enricher.enrich(future, getContext(environment, v.getKey())), (a, b) -> b)
 								.get();
 					}
 					catch (InterruptedException | ExecutionException e) {
 						throw new RuntimeException(e);
 					}
 				})));
+	}
+
+	private PositionDetailsLoadContext getContext(BatchLoaderEnvironment environment, String key) {
+		return (PositionDetailsLoadContext) environment.getKeyContexts().get(key);
 	}
 
 }

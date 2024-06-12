@@ -1,12 +1,10 @@
 scalar BigDecimal
 
 type Position {
-    id: ID!
     symbol: String!
     quantity: BigDecimal!
     purchasePrice: BigDecimal!
     currentPrice: BigDecimal!
-    purchaseDate: String!
 }
 
 input ClientId {
