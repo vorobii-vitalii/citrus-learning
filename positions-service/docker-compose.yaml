@@ -1,0 +1,43 @@
+version: '3.1'
+
+services:
+
+  positions-service:
+    image: 'docker.io/library/positions-service:latest'
+    depends_on:
+      - wiremock
+      - mongo
+    networks:
+      net:
+    container_name: positions-service
+    environment:
+      FINN_HUB_API_BASE_URL: http://wiremock:8080/
+    ports:
+      - "8080:8080"
+
+  mongo:
+    image: mongo
+    restart: always
+    container_name: mongodb
+    networks:
+      net:
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    ports:
+      - "27017:27017"
+
+  wiremock:
+    image: "wiremock/wiremock:latest"
+    networks:
+      net:
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./wiremock/__files:/home/wiremock/__files
+      - ./wiremock/mappings:/home/wiremock/mappings
+      - ./wiremock/extensions:/var/wiremock/extensions
+    entrypoint: [ "/docker-entrypoint.sh", "--global-response-templating", "--disable-gzip", "--verbose" ]
+
+networks:
+  net:

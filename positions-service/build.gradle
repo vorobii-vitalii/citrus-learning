@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'org.citrus.learn'
-version = '0.0.1-SNAPSHOT'
+archivesBaseName = 'app'
 
 java {
     toolchain {
