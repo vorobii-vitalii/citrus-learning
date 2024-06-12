@@ -57,7 +57,7 @@ dependencyManagement {
 }
 
 generateJava {
-    schemaPaths = ["${projectDir}/src/main/resources/graphql-client"]
+    schemaPaths = ["${projectDir}/src/main/resources/graphql"]
     packageName = 'org.citrus.learn.positionsservice.codegen'
     generateClient = true
 }

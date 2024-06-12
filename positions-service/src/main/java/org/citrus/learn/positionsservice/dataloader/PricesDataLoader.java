@@ -23,8 +23,8 @@ public class PricesDataLoader implements MappedBatchLoader<String, BigDecimal> {
 	private final PricesProvider pricesProvider;
 
 	@Override
-	public CompletionStage<Map<String, BigDecimal>> load(Set<String> set) {
-		return CompletableFuture.supplyAsync(() -> pricesProvider.fetchPricesForSymbols(set), executorService);
+	public CompletionStage<Map<String, BigDecimal>> load(Set<String> symbols) {
+		return CompletableFuture.supplyAsync(() -> pricesProvider.fetchPricesForSymbols(symbols), executorService);
 	}
 
 }

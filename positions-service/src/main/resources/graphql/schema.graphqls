@@ -17,6 +17,6 @@ type PositionDetails {
 }
 
 type Query {
-    positionDetails(clientId: ClientId): [PositionDetails!]
+    positionDetails(clientId: ClientId): PositionDetails!
     position(clientId: ClientId, id: ID!): Position
 }

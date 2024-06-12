@@ -1,6 +1,5 @@
 package org.citrus.learn.positionsservice.datafetchers;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -8,11 +7,16 @@ import java.util.concurrent.CompletableFuture;
 import org.citrus.learn.positionsservice.codegen.DgsConstants;
 import org.citrus.learn.positionsservice.codegen.types.ClientId;
 import org.citrus.learn.positionsservice.codegen.types.Position;
+import org.citrus.learn.positionsservice.codegen.types.PositionDetails;
+import org.citrus.learn.positionsservice.context.PositionDetailsLoadContext;
 import org.dataloader.DataLoader;
 
 import com.netflix.graphql.dgs.DgsComponent;
 import com.netflix.graphql.dgs.DgsData;
+import com.netflix.graphql.dgs.DgsQuery;
+import com.netflix.graphql.dgs.InputArgument;
 
+import graphql.execution.DataFetcherResult;
 import graphql.schema.DataFetchingEnvironment;
 import lombok.extern.slf4j.Slf4j;
 
@@ -20,35 +24,37 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class PositionDetailsDataFetcher {
 
-	@DgsData(field = DgsConstants.POSITIONDETAILS.Positions, parentType = DgsConstants.POSITIONDETAILS.TYPE_NAME)
-	public List<Position> fetchPositions(DataFetchingEnvironment environment) {
-		// TODO: Load positions without current prices from DB
-		ClientId clientId = environment.getArgument("clientId");
-		log.info("Fetching positions of client = {}", clientId);
-		return List.of(
-				Position.newBuilder()
-						.id("1")
-						.symbol("XBT/USD")
-						.purchaseDate("2024/06/01")
-						.purchasePrice(123D)
-						.quantity(1)
-						.build(),
-				Position.newBuilder()
-						.id("2")
-						.symbol("RPL/USD")
-						.purchaseDate("2024/06/03")
-						.purchasePrice(99D)
-						.quantity(5)
-						.build()
-		);
+	@DgsQuery(field = DgsConstants.QUERY.PositionDetails)
+	public DataFetcherResult<PositionDetails> getPositionDetails(
+			DataFetchingEnvironment dataFetchingEnvironment,
+			@InputArgument(name = DgsConstants.QUERY.POSITIONDETAILS_INPUT_ARGUMENT.ClientId) ClientId clientId
+	) {
+		log.info("Fetching positions of client = {} position details", clientId);
+		boolean shouldFetchPrices = dataFetchingEnvironment.getSelectionSet().contains(DgsConstants.POSITIONDETAILS.Performance);
+		var positionDetailsLoadContext = new PositionDetailsLoadContext(clientId, shouldFetchPrices);
+		log.info("Calculated position details load context = {}", positionDetailsLoadContext);
+		return DataFetcherResult.<PositionDetails> newResult()
+				.data(new PositionDetails())
+				.localContext(positionDetailsLoadContext)
+				.build();
 	}
 
-	@DgsData(field = DgsConstants.POSITION.CurrentPrice, parentType = DgsConstants.POSITION.TYPE_NAME)
-	public CompletableFuture<BigDecimal> fetchCurrentPrice(DataFetchingEnvironment environment) {
-		DataLoader<String, BigDecimal> pricesLoader = Objects.requireNonNull(environment.getDataLoader("prices"));
-		Position position = Objects.requireNonNull(environment.getSource());
-		log.info("Going to fetch price for position = {}", position);
-		return pricesLoader.load(position.getSymbol());
+	@DgsData(field = DgsConstants.POSITIONDETAILS.Positions, parentType = DgsConstants.POSITIONDETAILS.TYPE_NAME)
+	public CompletableFuture<List<Position>> fetchPositions(DataFetchingEnvironment environment) {
+		PositionDetailsLoadContext positionDetailsLoadContext = Objects.requireNonNull(environment.getLocalContext());
+		DataLoader<String, List<Position>> positionLoader = Objects.requireNonNull(environment.getDataLoader("positions"));
+		return positionLoader.load(positionDetailsLoadContext.clientId().getId(), positionDetailsLoadContext);
+	}
+
+	@DgsData(field = DgsConstants.POSITIONDETAILS.Performance, parentType = DgsConstants.POSITIONDETAILS.TYPE_NAME)
+	public CompletableFuture<Double> fetchPerformance(DataFetchingEnvironment environment) {
+		PositionDetailsLoadContext positionDetailsLoadContext = Objects.requireNonNull(environment.getLocalContext());
+		DataLoader<String, List<Position>> positionLoader = Objects.requireNonNull(environment.getDataLoader("positions"));
+		return positionLoader.load(positionDetailsLoadContext.clientId().getId(), positionDetailsLoadContext)
+				.thenApply(positions -> {
+					log.info("Calculating performance based on positions = {}", positions);
+					return 4D;
+				});
 	}
 
 }
