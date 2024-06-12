@@ -1,5 +1,6 @@
 package org.citrus.learn.positionsservice.dataloader;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -37,35 +38,33 @@ public class PositionsDataLoader implements MappedBatchLoaderWithContext<String,
 									.id("1")
 									.symbol("XBT/USD")
 									.purchaseDate("2024/06/01")
-									.purchasePrice(123D)
-									.quantity(1)
+									.purchasePrice(BigDecimal.valueOf(123D))
+									.quantity(BigDecimal.valueOf(1))
 									.build(),
 							Position.newBuilder()
 									.id("2")
 									.symbol("RPL/USD")
 									.purchaseDate("2024/06/03")
-									.purchasePrice(99D)
-									.quantity(5)
+									.purchasePrice(BigDecimal.valueOf(99D))
+									.quantity(BigDecimal.valueOf(5))
 									.build()
 					)));
-		}).thenApply(positionsByClientId -> {
-			return positionsByClientId.entrySet()
-					.stream()
-					.collect(Collectors.toMap(Map.Entry::getKey, v -> {
-						try {
-							return positionsEnrichers.stream()
-									.filter(i -> i.shouldBeApplied((PositionDetailsLoadContext) environment.getKeyContexts().get(v.getKey())))
-									.reduce(CompletableFuture.completedFuture(v.getValue()),
-											(future, enricher) -> enricher.enrich(future,
-													(PositionDetailsLoadContext) environment.getKeyContexts().get(v.getKey()))
-											, (a, b) -> b)
-									.get();
-						}
-						catch (InterruptedException | ExecutionException e) {
-							throw new RuntimeException(e);
-						}
-					}));
-		});
+		}).thenApply(positionsByClientId -> positionsByClientId.entrySet()
+				.stream()
+				.collect(Collectors.toMap(Map.Entry::getKey, v -> {
+					try {
+						return positionsEnrichers.stream()
+								.filter(i -> i.shouldBeApplied((PositionDetailsLoadContext) environment.getKeyContexts().get(v.getKey())))
+								.reduce(CompletableFuture.completedFuture(v.getValue()),
+										(future, enricher) -> enricher.enrich(future,
+												(PositionDetailsLoadContext) environment.getKeyContexts().get(v.getKey()))
+										, (a, b) -> b)
+								.get();
+					}
+					catch (InterruptedException | ExecutionException e) {
+						throw new RuntimeException(e);
+					}
+				})));
 	}
 
 }

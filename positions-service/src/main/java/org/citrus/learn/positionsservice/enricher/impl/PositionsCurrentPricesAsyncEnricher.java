@@ -38,8 +38,7 @@ public class PositionsCurrentPricesAsyncEnricher implements AsyncEnricher<List<P
 									if (currentPrice == null) {
 										log.warn("No price for {}", symbol);
 									} else {
-										// TODO: Change!
-										position.setCurrentPrice(currentPrice.doubleValue());
+										position.setCurrentPrice(currentPrice);
 									}
 								})
 								.toList();

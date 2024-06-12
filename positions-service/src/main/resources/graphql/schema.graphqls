@@ -1,9 +1,11 @@
+scalar BigDecimal
+
 type Position {
     id: ID!
     symbol: String!
-    quantity: Float!
-    purchasePrice: Float!
-    currentPrice: Float!
+    quantity: BigDecimal!
+    purchasePrice: BigDecimal!
+    currentPrice: BigDecimal!
     purchaseDate: String!
 }
 
@@ -13,10 +15,9 @@ input ClientId {
 
 type PositionDetails {
     positions: [Position!]
-    performance: Float!
+    performance: BigDecimal!
 }
 
 type Query {
     positionDetails(clientId: ClientId): PositionDetails!
-    position(clientId: ClientId, id: ID!): Position
 }

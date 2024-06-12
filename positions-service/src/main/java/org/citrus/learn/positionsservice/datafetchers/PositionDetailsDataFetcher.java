@@ -1,5 +1,7 @@
 package org.citrus.learn.positionsservice.datafetchers;
 
+import java.math.BigDecimal;
+import java.math.MathContext;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -24,6 +26,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class PositionDetailsDataFetcher {
 
+	public static final MathContext MATH_CONTEXT = new MathContext(8);
+
 	@DgsQuery(field = DgsConstants.QUERY.PositionDetails)
 	public DataFetcherResult<PositionDetails> getPositionDetails(
 			DataFetchingEnvironment dataFetchingEnvironment,
@@ -47,13 +51,22 @@ public class PositionDetailsDataFetcher {
 	}
 
 	@DgsData(field = DgsConstants.POSITIONDETAILS.Performance, parentType = DgsConstants.POSITIONDETAILS.TYPE_NAME)
-	public CompletableFuture<Double> fetchPerformance(DataFetchingEnvironment environment) {
+	public CompletableFuture<BigDecimal> fetchPerformance(DataFetchingEnvironment environment) {
 		PositionDetailsLoadContext positionDetailsLoadContext = Objects.requireNonNull(environment.getLocalContext());
 		DataLoader<String, List<Position>> positionLoader = Objects.requireNonNull(environment.getDataLoader("positions"));
 		return positionLoader.load(positionDetailsLoadContext.clientId().getId(), positionDetailsLoadContext)
 				.thenApply(positions -> {
 					log.info("Calculating performance based on positions = {}", positions);
-					return 4D;
+					if (positions.isEmpty()) {
+						return BigDecimal.ZERO;
+					}
+
+					return positions
+							.stream()
+							.map(v -> v.getCurrentPrice().divide(v.getPurchasePrice(), MATH_CONTEXT))
+							.reduce(BigDecimal::add)
+							.orElse(BigDecimal.ZERO)
+							.divide(BigDecimal.valueOf(positions.size()), MATH_CONTEXT);
 				});
 	}
 

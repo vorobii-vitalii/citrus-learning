@@ -14,9 +14,7 @@ public class FinnHubConfig {
 
 	@Bean
 	QuotesService quotesService() {
-		Retrofit retrofit = new Retrofit.Builder()
-				.baseUrl(finnHubApiBaseURL)
-				.build();
+		var retrofit = new Retrofit.Builder().baseUrl(finnHubApiBaseURL).build();
 		return retrofit.create(QuotesService.class);
 	}
 
