@@ -43,11 +43,22 @@ dependencies {
     implementation 'com.netflix.graphql.dgs:graphql-dgs-extended-scalars'
 
     // RetroFit
-    // TODO: Extract version
-    implementation 'com.squareup.retrofit2:retrofit:2.11.0'
-    implementation 'com.squareup.retrofit2:converter-gson:2.11.0'
+    implementation "com.squareup.retrofit2:retrofit:$retrofitVersion"
+    implementation "com.squareup.retrofit2:converter-gson:$retrofitVersion"
 
+    // Citrus
+    testImplementation "org.citrusframework:citrus-core:$citrusVersion"
+    testImplementation "org.citrusframework:citrus-junit5:$citrusVersion"
+    testImplementation "org.citrusframework:citrus-groovy:$citrusVersion"
+    testImplementation "org.citrusframework:citrus-kafka:$citrusVersion"
 
+    // Test containers
+    testImplementation "org.testcontainers:testcontainers:$testContainersVersion"
+    testImplementation "org.testcontainers:junit-jupiter:$testContainersVersion"
+    testImplementation "org.testcontainers:mongodb:$testContainersVersion"
+
+    // Spring Integration
+    testImplementation "org.springframework.integration:spring-integration-mongodb"
 
 }
 
