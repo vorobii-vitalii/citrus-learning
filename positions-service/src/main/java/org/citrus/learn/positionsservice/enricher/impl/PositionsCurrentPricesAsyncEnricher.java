@@ -7,7 +7,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
-import org.citrus.learn.positionsservice.client.PricesProvider;
+import org.citrus.learn.positionsservice.prices.PricesProvider;
 import org.citrus.learn.positionsservice.codegen.types.Position;
 import org.citrus.learn.positionsservice.context.PositionDetailsLoadContext;
 import org.citrus.learn.positionsservice.enricher.AsyncEnricher;

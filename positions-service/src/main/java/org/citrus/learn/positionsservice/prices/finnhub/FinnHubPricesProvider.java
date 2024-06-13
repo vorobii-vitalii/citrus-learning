@@ -1,4 +1,4 @@
-package org.citrus.learn.positionsservice.client.finnhub;
+package org.citrus.learn.positionsservice.prices.finnhub;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -8,7 +8,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.citrus.learn.positionsservice.client.PricesProvider;
+import org.citrus.learn.positionsservice.prices.PricesProvider;
 import org.springframework.stereotype.Component;
 
 import lombok.RequiredArgsConstructor;

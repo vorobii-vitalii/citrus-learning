@@ -1,4 +1,4 @@
-package org.citrus.learn.positionsservice.client.finnhub;
+package org.citrus.learn.positionsservice.prices.finnhub;
 
 import java.util.List;
 

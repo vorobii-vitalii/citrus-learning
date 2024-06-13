@@ -12,6 +12,7 @@ import org.citrus.learn.positionsservice.codegen.types.Position;
 import org.citrus.learn.positionsservice.codegen.types.PositionDetails;
 import org.citrus.learn.positionsservice.context.PositionDetailsLoadContext;
 import org.dataloader.DataLoader;
+import org.jetbrains.annotations.NotNull;
 
 import com.netflix.graphql.dgs.DgsComponent;
 import com.netflix.graphql.dgs.DgsData;
@@ -25,8 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 @DgsComponent
 @Slf4j
 public class PositionDetailsDataFetcher {
-
-	public static final MathContext MATH_CONTEXT = new MathContext(8);
+	private static final MathContext MATH_CONTEXT = new MathContext(8);
 
 	@DgsQuery(field = DgsConstants.QUERY.PositionDetails)
 	public DataFetcherResult<PositionDetails> getPositionDetails(
@@ -46,14 +46,14 @@ public class PositionDetailsDataFetcher {
 	@DgsData(field = DgsConstants.POSITIONDETAILS.Positions, parentType = DgsConstants.POSITIONDETAILS.TYPE_NAME)
 	public CompletableFuture<List<Position>> fetchPositions(DataFetchingEnvironment environment) {
 		PositionDetailsLoadContext positionDetailsLoadContext = Objects.requireNonNull(environment.getLocalContext());
-		DataLoader<String, List<Position>> positionLoader = Objects.requireNonNull(environment.getDataLoader("positions"));
+		DataLoader<String, List<Position>> positionLoader = getPositionsDataLoader(environment);
 		return positionLoader.load(positionDetailsLoadContext.clientId().getId(), positionDetailsLoadContext);
 	}
 
 	@DgsData(field = DgsConstants.POSITIONDETAILS.Performance, parentType = DgsConstants.POSITIONDETAILS.TYPE_NAME)
 	public CompletableFuture<BigDecimal> fetchPerformance(DataFetchingEnvironment environment) {
 		PositionDetailsLoadContext positionDetailsLoadContext = Objects.requireNonNull(environment.getLocalContext());
-		DataLoader<String, List<Position>> positionLoader = Objects.requireNonNull(environment.getDataLoader("positions"));
+		DataLoader<String, List<Position>> positionLoader = getPositionsDataLoader(environment);
 		return positionLoader.load(positionDetailsLoadContext.clientId().getId(), positionDetailsLoadContext)
 				.thenApply(positions -> {
 					log.info("Calculating performance based on positions = {}", positions);
@@ -67,6 +67,10 @@ public class PositionDetailsDataFetcher {
 							.orElse(BigDecimal.ZERO)
 							.divide(BigDecimal.valueOf(positions.size()), MATH_CONTEXT);
 				});
+	}
+
+	private @NotNull DataLoader<String, List<Position>> getPositionsDataLoader(DataFetchingEnvironment environment) {
+		return Objects.requireNonNull(environment.getDataLoader("positions"));
 	}
 
 	private BigDecimal calculatePositionPerformance(Position v) {

@@ -1,4 +1,4 @@
-package org.citrus.learn.positionsservice.client;
+package org.citrus.learn.positionsservice.prices;
 
 import java.math.BigDecimal;
 import java.util.Map;
