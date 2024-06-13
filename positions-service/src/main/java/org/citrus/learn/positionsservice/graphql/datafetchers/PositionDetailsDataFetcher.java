@@ -1,4 +1,4 @@
-package org.citrus.learn.positionsservice.datafetchers;
+package org.citrus.learn.positionsservice.graphql.datafetchers;
 
 import org.citrus.learn.positionsservice.codegen.DgsConstants;
 import org.citrus.learn.positionsservice.codegen.types.ClientId;

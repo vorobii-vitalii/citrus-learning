@@ -12,10 +12,10 @@ input ClientId {
 }
 
 type PositionDetails {
-    positions: [Position!]
+    positions: [Position!]!
     performance: BigDecimal!
 }
 
 type Query {
-    positionDetails(clientId: ClientId): PositionDetails!
+    positionDetails(clientId: ClientId!): PositionDetails!
 }

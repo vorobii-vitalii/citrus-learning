@@ -10,6 +10,7 @@ import java.util.concurrent.CompletableFuture;
 import org.citrus.learn.positionsservice.codegen.types.ClientId;
 import org.citrus.learn.positionsservice.codegen.types.Position;
 import org.citrus.learn.positionsservice.context.PositionDetailsLoadContext;
+import org.citrus.learn.positionsservice.graphql.datafetchers.PositionsListFetcher;
 import org.dataloader.DataLoader;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

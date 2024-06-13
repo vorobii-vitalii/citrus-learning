@@ -1,4 +1,4 @@
-package org.citrus.learn.positionsservice.datafetchers;
+package org.citrus.learn.positionsservice.graphql.datafetchers;
 
 import java.util.List;
 import java.util.Objects;

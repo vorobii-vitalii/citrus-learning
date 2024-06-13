@@ -5,6 +5,7 @@ import static org.mockito.Mockito.when;
 
 import org.citrus.learn.positionsservice.codegen.types.ClientId;
 import org.citrus.learn.positionsservice.context.PositionDetailsLoadContext;
+import org.citrus.learn.positionsservice.graphql.datafetchers.PositionDetailsDataFetcher;
 import org.citrus.learn.positionsservice.predicate.RequestPricesPredicate;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
