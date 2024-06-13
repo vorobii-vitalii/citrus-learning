@@ -19,11 +19,7 @@ public class FinnHubConfig {
 	QuotesService quotesService() {
 		var retrofit = new Retrofit.Builder()
 				.baseUrl(finnHubApiBaseURL)
-				.addConverterFactory(GsonConverterFactory.create(
-						new GsonBuilder()
-								.setLenient()
-								.create()
-				))
+				.addConverterFactory(GsonConverterFactory.create(new GsonBuilder().setLenient().create()))
 				.build();
 		return retrofit.create(QuotesService.class);
 	}
