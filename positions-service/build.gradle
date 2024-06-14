@@ -50,15 +50,19 @@ dependencies {
     testImplementation "org.citrusframework:citrus-core:$citrusVersion"
     testImplementation "org.citrusframework:citrus-junit5:$citrusVersion"
     testImplementation "org.citrusframework:citrus-groovy:$citrusVersion"
-    testImplementation "org.citrusframework:citrus-kafka:$citrusVersion"
+    testImplementation "org.citrusframework:citrus-http:$citrusVersion"
 
     // Test containers
     testImplementation "org.testcontainers:testcontainers:$testContainersVersion"
     testImplementation "org.testcontainers:junit-jupiter:$testContainersVersion"
     testImplementation "org.testcontainers:mongodb:$testContainersVersion"
+    testImplementation "org.testcontainers:mockserver:$testContainersVersion"
 
     // Spring Integration
     testImplementation "org.springframework.integration:spring-integration-mongodb"
+
+    // Mock server API
+    implementation 'org.mock-server:mockserver-client-java:5.15.0'
 
 }
 
@@ -78,5 +82,6 @@ generateJava {
 }
 
 tasks.named('test') {
+    testLogging.showStandardStreams = true
     useJUnitPlatform()
 }

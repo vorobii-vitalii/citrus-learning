@@ -31,7 +31,7 @@ public class AverageProfitPositionsPerformanceEvaluator implements PositionsPerf
 
 
 	private BigDecimal calculatePositionPerformance(Position v) {
-		return v.getCurrentPrice().subtract(v.getPurchasePrice());
+		return v.getCurrentPrice().subtract(v.getPurchasePrice()).multiply(v.getQuantity());
 	}
 
 }

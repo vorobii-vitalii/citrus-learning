@@ -23,10 +23,12 @@ class TestAverageProfitPositionsPerformanceEvaluator {
 				Position.newBuilder()
 						.currentPrice(BigDecimal.valueOf(5L))
 						.purchasePrice(BigDecimal.valueOf(3L))
+						.quantity(BigDecimal.ONE)
 						.build(),
 				Position.newBuilder()
 						.currentPrice(BigDecimal.valueOf(14L))
 						.purchasePrice(BigDecimal.valueOf(10L))
+						.quantity(BigDecimal.ONE)
 						.build()
 		));
 		assertThat(actualPerformance).isEqualTo("3");

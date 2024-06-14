@@ -39,7 +39,10 @@ public class PositionsDataLoader implements MappedBatchLoaderWithContext<String,
 							var clientId = entry.getKey();
 							var positions = entry.getValue();
 							var context = getContext(environment, clientId);
-							return Mono.fromCompletionStage(() -> applyEnrichers(context, positions)).map(p -> Pair.of(clientId, p));
+							return Mono.fromCompletionStage(() -> {
+								log.info("Positions before applying enrichers = {}", positions);
+								return applyEnrichers(context, positions);
+							}).map(p -> Pair.of(clientId, p));
 						})
 						.collectMap(Pair::getFirst, Pair::getSecond)
 						.toFuture());
