@@ -1,2 +1,4 @@
 rootProject.name = 'positions-service'
 include('component-tests')
+include 'graphql-api'
+

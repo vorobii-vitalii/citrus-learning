@@ -1,6 +1,5 @@
 plugins {
     id 'java'
-    id 'com.netflix.dgs.codegen' version '6.2.1'
     id "io.freefair.lombok" version "8.6"
 }
 
@@ -27,15 +26,6 @@ java {
     }
 }
 
-generateJava {
-    schemaPaths = ["${projectDir}/src/test/resources/graphql"]
-    packageName = 'org.citrus.learn.positionsservice.codegen'
-    generateClient = true
-    typeMapping = [
-            "BigDecimal" : "java.math.BigDecimal",
-    ]
-}
-
 dependencies {
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
@@ -55,17 +45,22 @@ dependencies {
     testImplementation "org.testcontainers:mockserver:$testContainersVersion"
 
     // Spring Integration
-    testImplementation "org.springframework.integration:spring-integration-mongodb"
+    testImplementation "org.springframework.integration:spring-integration-mongodb:6.3.1"
     implementation 'org.mongodb:mongodb-driver-reactivestreams:5.1.1'
 
     // Gson
     implementation 'com.google.code.gson:gson:2.11.0'
+
+    implementation 'com.netflix.graphql.dgs.codegen:graphql-dgs-codegen-gradle:6.2.1'
+    implementation 'com.netflix.graphql.dgs.codegen:graphql-dgs-codegen-shared-core:6.2.1'
 
     // Mock server API
     implementation 'org.mock-server:mockserver-client-java:5.15.0'
 
     // Logging
     testImplementation 'ch.qos.logback:logback-classic:1.5.6'
+
+    implementation project(":graphql-api")
 }
 
 test {
