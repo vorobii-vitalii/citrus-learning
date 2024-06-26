@@ -63,8 +63,22 @@ dependencies {
 
     // Mock server API
     implementation 'org.mock-server:mockserver-client-java:5.15.0'
+
+    // Logging
+    testImplementation 'ch.qos.logback:logback-classic:1.5.6'
 }
 
-tasks.register("componentTests") {
+test {
+    exclude '**/*'
+}
+
+tasks.register('componentTests', Test) {
+    description = 'Runs component tests'
+    group = 'verification'
+    include '**/*'
+
     useJUnitPlatform()
+    testLogging.showStandardStreams = true
+    testLogging.showStackTraces = true
+    testLogging.showExceptions = true
 }

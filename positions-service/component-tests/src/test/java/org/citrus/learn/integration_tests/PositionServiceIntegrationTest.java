@@ -21,6 +21,7 @@ import org.citrusframework.junit.jupiter.spring.CitrusSpringSupport;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockserver.client.MockServerClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
@@ -152,6 +153,7 @@ public class PositionServiceIntegrationTest extends BaseIntegrationTest {
 				"""));
 	}
 
+	@Timeout(5)
 	@Test
 	@CitrusTest
 	void shouldCallQuoteServiceToFetchPricesIfPerformanceRequested(@CitrusResource TestActionRunner actions) {
