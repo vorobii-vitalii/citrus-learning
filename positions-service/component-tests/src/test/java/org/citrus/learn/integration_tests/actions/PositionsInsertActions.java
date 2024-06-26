@@ -1,11 +1,11 @@
-package org.citrus.learn.positionsservice.integration_tests.actions;
+package org.citrus.learn.integration_tests.actions;
 
 import static org.citrusframework.actions.SendMessageAction.Builder.send;
 import static org.citrusframework.container.Sequence.Builder.sequential;
 
 import java.util.List;
 
-import org.citrus.learn.positionsservice.domain.ClientPositionCollectionObject;
+import org.citrus.learn.integration_tests.domain.ClientPositionCollectionObject;
 import org.citrusframework.actions.SendMessageAction;
 import org.citrusframework.channel.ChannelEndpoint;
 import org.citrusframework.channel.ChannelEndpointBuilder;

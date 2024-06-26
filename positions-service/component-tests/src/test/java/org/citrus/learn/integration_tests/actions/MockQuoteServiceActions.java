@@ -1,4 +1,4 @@
-package org.citrus.learn.positionsservice.integration_tests.actions;
+package org.citrus.learn.integration_tests.actions;
 
 import static org.mockserver.model.HttpRequest.request;
 import static org.mockserver.model.HttpResponse.response;
@@ -6,7 +6,7 @@ import static org.mockserver.model.HttpResponse.response;
 import java.math.BigDecimal;
 import java.util.Map;
 
-import org.citrus.learn.positionsservice.prices.finnhub.Quote;
+import org.citrus.learn.integration_tests.quote_api.Quote;
 import org.citrusframework.actions.AbstractTestAction;
 import org.citrusframework.context.TestContext;
 import org.mockserver.client.MockServerClient;

@@ -1,4 +1,4 @@
-package org.citrus.learn.positionsservice.integration_tests.config;
+package org.citrus.learn.integration_tests.config;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;

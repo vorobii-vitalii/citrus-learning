@@ -1,4 +1,4 @@
-package org.citrus.learn.positionsservice.integration_tests.actions;
+package org.citrus.learn.integration_tests.actions;
 
 import static org.citrusframework.http.actions.HttpActionBuilder.http;
 
@@ -12,7 +12,6 @@ import org.springframework.http.HttpStatus;
 
 import com.google.gson.Gson;
 import com.netflix.graphql.dgs.client.codegen.GraphQLQueryRequest;
-
 
 public class PositionsGraphQLServiceActions {
 	private static final Logger LOGGER = LoggerFactory.getLogger(PositionsGraphQLServiceActions.class);

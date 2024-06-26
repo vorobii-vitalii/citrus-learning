@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: positions-service
+  namespace: trading-system
+  labels:
+    app: positions-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: positions-service
+  template:
+    metadata:
+      name: positions-service
+      annotations:
+        hi: hi
+      labels:
+        app: positions-service
+    spec:
+      containers:
+        - name: positions-service
+          image: positions-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+              protocol: TCP
+      restartPolicy: Always
+      # <service-name>.<namespace-name>.svc.cluster.local

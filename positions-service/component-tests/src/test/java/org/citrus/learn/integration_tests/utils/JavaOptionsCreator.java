@@ -1,4 +1,4 @@
-package org.citrus.learn.positionsservice.integration_tests.utils;
+package org.citrus.learn.integration_tests.utils;
 
 import java.util.Map;
 import java.util.stream.Collectors;

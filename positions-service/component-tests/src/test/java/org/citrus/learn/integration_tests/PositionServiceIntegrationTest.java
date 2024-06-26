@@ -1,4 +1,4 @@
-package org.citrus.learn.positionsservice.integration_tests;
+package org.citrus.learn.integration_tests;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -6,15 +6,13 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.bson.types.ObjectId;
+import org.citrus.learn.integration_tests.actions.MockQuoteServiceActions;
+import org.citrus.learn.integration_tests.actions.PositionsGraphQLServiceActions;
+import org.citrus.learn.integration_tests.actions.PositionsInsertActions;
+import org.citrus.learn.integration_tests.domain.ClientPositionCollectionObject;
 import org.citrus.learn.positionsservice.codegen.client.PositionDetailsGraphQLQuery;
 import org.citrus.learn.positionsservice.codegen.client.PositionDetailsProjectionRoot;
 import org.citrus.learn.positionsservice.codegen.types.ClientId;
-import org.citrus.learn.positionsservice.domain.ClientPositionCollectionObject;
-import org.citrus.learn.positionsservice.integration_tests.actions.MockQuoteServiceActions;
-import org.citrus.learn.positionsservice.integration_tests.actions.PositionsGraphQLServiceActions;
-import org.citrus.learn.positionsservice.integration_tests.actions.PositionsInsertActions;
-import org.citrus.learn.positionsservice.integration_tests.utils.JavaOptionsCreator;
-import org.citrus.learn.positionsservice.integration_tests.utils.LocalJavaContainer;
 import org.citrusframework.TestActionRunner;
 import org.citrusframework.annotations.CitrusResource;
 import org.citrusframework.annotations.CitrusTest;
@@ -24,63 +22,24 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockserver.client.MockServerClient;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.context.ContextConfiguration;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.MockServerContainer;
-import org.testcontainers.containers.MongoDBContainer;
-import org.testcontainers.containers.Network;
-import org.testcontainers.containers.output.Slf4jLogConsumer;
-import org.testcontainers.containers.wait.strategy.Wait;
-import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.DockerImageName;
 
 import com.netflix.graphql.dgs.client.codegen.GraphQLQueryRequest;
 
-import groovy.util.logging.Slf4j;
+import lombok.extern.slf4j.Slf4j;
 
 @Testcontainers
 @CitrusSpringSupport
 @ContextConfiguration(classes = CitrusSpringConfig.class)
 @Slf4j
-public class PositionServiceIntegrationTest {
-	private static final DockerImageName MOCKSERVER_IMAGE = DockerImageName
-			.parse("mockserver/mockserver")
-			.withTag("mockserver-" + MockServerClient.class.getPackage().getImplementationVersion());
+public class PositionServiceIntegrationTest extends BaseIntegrationTest {
 	private static final String MONGO_DATABASE = "test";
 	private static final String POSITIONS_COLLECTION = "positions";
-	private static final Logger LOGGER = LoggerFactory.getLogger(PositionServiceIntegrationTest.class);
-	private static final int GRAPHQL_SERVICE_PORT = 8080;
 
-	static Network network = Network.newNetwork();
-	@Container
-	static public MockServerContainer mockServer = new MockServerContainer(MOCKSERVER_IMAGE)
-			.withNetwork(network)
-			.withNetworkAliases("mockserver")
-			.withLogConsumer(new Slf4jLogConsumer(LOGGER).withPrefix("mock-server"));
-	@Container
-	static MongoDBContainer mongo = new MongoDBContainer()
-			.withNetwork(network)
-			.withNetworkAliases("mongo")
-			.withLogConsumer(new Slf4jLogConsumer(LOGGER).withPrefix("mongo"));
-	@Container
-	static GenericContainer<?> positionsService = new LocalJavaContainer<>()
-			.withNetwork(network)
-			.dependsOn(mongo, mockServer)
-			.withEnv(Map.of(
-					"JAVA_OPTS", JavaOptionsCreator.createOptions(Map.of(
-							"finn.hub.api.url", "http://mockserver:1080/",
-							"spring.data.mongodb.uri", "mongodb://mongo:27017/test"
-					))
-			))
-			.withExposedPorts(GRAPHQL_SERVICE_PORT)
-			.waitingFor(Wait.forListeningPorts(GRAPHQL_SERVICE_PORT))
-			.withLogConsumer(new Slf4jLogConsumer(LOGGER).withPrefix("payment-service"));
 	@Autowired
 	ApplicationContext applicationContext;
 	MockServerClient mockServerClient;
@@ -90,11 +49,11 @@ public class PositionServiceIntegrationTest {
 
 	@BeforeEach
 	void init() {
-		mockServerClient = new MockServerClient(mockServer.getHost(), mockServer.getServerPort());
+		mockServerClient = new MockServerClient(MOCK_SERVER.getHost(), MOCK_SERVER.getServerPort());
 		positionsInsertActions =
-				new PositionsInsertActions(applicationContext, mongo.getConnectionString(), MONGO_DATABASE, POSITIONS_COLLECTION);
+				new PositionsInsertActions(applicationContext, MONGO.getConnectionString(), MONGO_DATABASE, POSITIONS_COLLECTION);
 		positionsGraphQLServiceActions = new PositionsGraphQLServiceActions("http://localhost:%s/".formatted(
-				positionsService.getMappedPort(GRAPHQL_SERVICE_PORT)
+				POSITIONS_SERVICE.getMappedPort(GRAPHQL_SERVICE_PORT)
 		));
 		mockQuoteServiceActions = new MockQuoteServiceActions(mockServerClient);
 	}
@@ -239,6 +198,5 @@ public class PositionServiceIntegrationTest {
 				}
 				"""));
 	}
-
 
 }
