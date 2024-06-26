@@ -2,7 +2,6 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '3.3.0'
     id 'io.spring.dependency-management' version '1.1.5'
-    id 'com.netflix.dgs.codegen' version '6.2.1'
 }
 
 group = 'org.citrus.learn'
@@ -46,6 +45,8 @@ dependencies {
     implementation "com.squareup.retrofit2:retrofit:$retrofitVersion"
     implementation "com.squareup.retrofit2:converter-gson:$retrofitVersion"
 
+    implementation 'com.netflix.graphql.dgs.codegen:graphql-dgs-codegen-shared-core:6.2.1'
+
     implementation project(":graphql-api")
 }
 
@@ -53,15 +54,6 @@ dependencyManagement {
     imports {
         mavenBom "com.netflix.graphql.dgs:graphql-dgs-platform-dependencies:${netflixDgsVersion}"
     }
-}
-
-generateJava {
-    schemaPaths = ["${projectDir}/src/main/resources/graphql"]
-    packageName = 'org.citrus.learn.positionsservice.codegen'
-    generateClient = true
-    typeMapping = [
-            "BigDecimal" : "java.math.BigDecimal",
-    ]
 }
 
 tasks.named('test') {

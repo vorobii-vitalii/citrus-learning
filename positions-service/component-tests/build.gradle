@@ -51,7 +51,6 @@ dependencies {
     // Gson
     implementation 'com.google.code.gson:gson:2.11.0'
 
-    implementation 'com.netflix.graphql.dgs.codegen:graphql-dgs-codegen-gradle:6.2.1'
     implementation 'com.netflix.graphql.dgs.codegen:graphql-dgs-codegen-shared-core:6.2.1'
 
     // Mock server API
