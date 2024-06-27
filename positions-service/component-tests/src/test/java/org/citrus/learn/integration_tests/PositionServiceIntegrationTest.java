@@ -38,8 +38,6 @@ import lombok.extern.slf4j.Slf4j;
 @ContextConfiguration(classes = CitrusSpringConfig.class)
 @Slf4j
 public class PositionServiceIntegrationTest extends BaseIntegrationTest {
-	private static final String MONGO_DATABASE = "test";
-	private static final String POSITIONS_COLLECTION = "positions";
 
 	@Autowired
 	ApplicationContext applicationContext;
@@ -52,7 +50,7 @@ public class PositionServiceIntegrationTest extends BaseIntegrationTest {
 	void init() {
 		mockServerClient = new MockServerClient(MOCK_SERVER.getHost(), MOCK_SERVER.getServerPort());
 		positionsInsertActions =
-				new PositionsInsertActions(applicationContext, MONGO.getConnectionString(), MONGO_DATABASE, POSITIONS_COLLECTION);
+				new PositionsInsertActions(applicationContext);
 		positionsGraphQLServiceActions = new PositionsGraphQLServiceActions("http://localhost:%s/".formatted(
 				POSITIONS_SERVICE.getMappedPort(GRAPHQL_SERVICE_PORT)
 		));

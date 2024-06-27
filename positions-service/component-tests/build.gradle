@@ -60,6 +60,7 @@ dependencies {
     testImplementation 'ch.qos.logback:logback-classic:1.5.6'
 
     implementation project(":graphql-api")
+    implementation project(":mongo-citrus")
 }
 
 test {

@@ -7,32 +7,16 @@ import java.util.List;
 
 import org.citrus.learn.integration_tests.domain.ClientPositionCollectionObject;
 import org.citrusframework.actions.SendMessageAction;
-import org.citrusframework.channel.ChannelEndpoint;
-import org.citrusframework.channel.ChannelEndpointBuilder;
 import org.citrusframework.container.Sequence;
+import org.citrusframework.endpoint.Endpoint;
 import org.citrusframework.message.DefaultMessage;
 import org.springframework.context.ApplicationContext;
-import org.springframework.data.mongodb.core.SimpleReactiveMongoDatabaseFactory;
-import org.springframework.integration.dsl.IntegrationFlow;
-import org.springframework.integration.dsl.context.IntegrationFlowContext;
-import org.springframework.integration.mongodb.dsl.MongoDb;
-import org.springframework.integration.mongodb.dsl.ReactiveMongoDbMessageHandlerSpec;
-import org.springframework.messaging.MessageChannel;
-
-import com.mongodb.reactivestreams.client.MongoClients;
 
 public class PositionsInsertActions {
-	private final ChannelEndpoint mongoUpdateEndpoint;
+	private final Endpoint positionsEndpoint;
 
-	public PositionsInsertActions(ApplicationContext context, String mongoConnectionURL, String databaseName, String collectionName) {
-		var integrationFlowContext = context.getBean(IntegrationFlowContext.class);
-		var mongoWritesChannel = context.getBean("mongoWritesChannel", MessageChannel.class);
-		var integrationFlow = IntegrationFlow.from(mongoWritesChannel)
-				.log()
-				.handle(createMongoMessageHandler(mongoConnectionURL, databaseName, collectionName))
-				.get();
-		integrationFlowContext.registration(integrationFlow).register().start();
-		mongoUpdateEndpoint = new ChannelEndpointBuilder().channel(mongoWritesChannel).build();
+	public PositionsInsertActions(ApplicationContext context) {
+		this.positionsEndpoint = context.getBean("positionsCollectionMongoEndpoint", Endpoint.class);
 	}
 
 	public Sequence.Builder insertPositions(List<ClientPositionCollectionObject> positionsToStore) {
@@ -42,16 +26,7 @@ public class PositionsInsertActions {
 	}
 
 	private SendMessageAction.SendMessageActionBuilderSupport createPositionInsertAction(ClientPositionCollectionObject v) {
-		return send(mongoUpdateEndpoint).message(new DefaultMessage().setPayload(v));
-	}
-
-	private ReactiveMongoDbMessageHandlerSpec createMongoMessageHandler(
-			String mongoConnectionURL,
-			String databaseName,
-			String collectionName
-	) {
-		var mongoDbFactory = new SimpleReactiveMongoDatabaseFactory(MongoClients.create(mongoConnectionURL), databaseName);
-		return MongoDb.reactiveOutboundChannelAdapter(mongoDbFactory).collectionName(collectionName);
+		return send(positionsEndpoint).message(new DefaultMessage().setPayload(v));
 	}
 
 }
