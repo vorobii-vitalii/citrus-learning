@@ -39,21 +39,7 @@ dependencies {
 
     // JDBC Pool
     implementation 'com.zaxxer:HikariCP:5.1.0'
-// https://mvnrepository.com/artifact/org.apache.commons/commons-dbcp2
     implementation 'org.apache.commons:commons-dbcp2:2.12.0'
-
-
-    // Citrus
-    testImplementation "org.citrusframework:citrus-core:$citrusVersion"
-    testImplementation "org.citrusframework:citrus-junit5:$citrusVersion"
-    testImplementation "org.citrusframework:citrus-groovy:$citrusVersion"
-    testImplementation "org.citrusframework:citrus-kafka:$citrusVersion"
-
-    // Test containers
-    testImplementation "org.testcontainers:testcontainers:$testContainersVersion"
-    testImplementation "org.testcontainers:junit-jupiter:$testContainersVersion"
-    testImplementation "org.testcontainers:postgresql:$testContainersVersion"
-    testImplementation "org.testcontainers:kafka:$testContainersVersion"
 }
 
 tasks.named('test') {

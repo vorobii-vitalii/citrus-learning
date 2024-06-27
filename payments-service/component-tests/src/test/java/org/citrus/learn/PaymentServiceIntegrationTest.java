@@ -1,108 +1,36 @@
-package org.citrus.learn.paymentsservice;
+package org.citrus.learn;
 
-import static org.apache.kafka.clients.admin.AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG;
 import static org.citrusframework.actions.ExecuteSQLAction.Builder.sql;
 
-import java.util.Arrays;
-import java.util.Map;
 import java.util.UUID;
 
-import org.apache.kafka.clients.admin.AdminClient;
-import org.apache.kafka.clients.admin.NewTopic;
-import org.citrus.learn.paymentsservice.actions.AccountBalanceDatabaseActions;
-import org.citrus.learn.paymentsservice.actions.PaymentServiceActions;
-import org.citrus.learn.paymentsservice.utils.JavaOptionsCreator;
-import org.citrus.learn.paymentsservice.utils.LocalJavaContainer;
+import org.citrus.learn.actions.AccountBalanceDatabaseActions;
+import org.citrus.learn.actions.PaymentServiceActions;
 import org.citrusframework.TestActionRunner;
 import org.citrusframework.annotations.CitrusResource;
 import org.citrusframework.annotations.CitrusTest;
-import org.citrusframework.junit.jupiter.CitrusExtension;
-import org.junit.jupiter.api.BeforeAll;
+import org.citrusframework.config.CitrusSpringConfig;
+import org.citrusframework.junit.jupiter.spring.CitrusSpringSupport;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.KafkaContainer;
-import org.testcontainers.containers.Network;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.containers.output.Slf4jLogConsumer;
-import org.testcontainers.junit.jupiter.Container;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.ContextConfiguration;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.DockerImageName;
 
-import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
 @Testcontainers
-@ExtendWith(CitrusExtension.class)
+@CitrusSpringSupport
+@ContextConfiguration(classes = CitrusSpringConfig.class)
 public class PaymentServiceIntegrationTest {
-	private static final Logger LOGGER = LoggerFactory.getLogger(PaymentServiceIntegrationTest.class);
-	private static final String DATABASE_NAME = "foo";
-	private static final String USERNAME = "foo";
-	private static final String PASSWORD = "secret";
-	private static final String PAYMENT_REQUESTS = "payment-requests";
-	private static final String PAYMENT_RESPONSE = "payment-responses";
-	static Network network = Network.newNetwork();
 
-	@Container
-	static PostgreSQLContainer<?> postgreSQLContainer = new PostgreSQLContainer<>()
-			.withNetwork(network)
-			.withNetworkAliases("postgres")
-			.withDatabaseName(DATABASE_NAME)
-			.withUsername(USERNAME)
-			.withPassword(PASSWORD)
-			.withInitScript("init.sql");
+	@Autowired
+	private HikariDataSource dataSource;
 
-	@Container
-	static KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:6.2.1"))
-			.withNetwork(network)
-			.withNetworkAliases("kafka")
-			.withLogConsumer(new Slf4jLogConsumer(LOGGER).withPrefix("kafka"));
+	@Autowired
+	private PaymentServiceActions paymentServiceActions;
 
-	@Container
-	static GenericContainer<?> paymentService = new LocalJavaContainer<>()
-			.withNetwork(network)
-			.dependsOn(postgreSQLContainer, kafka)
-			.withEnv(Map.of(
-					"JAVA_OPTS", JavaOptionsCreator.createOptions(Map.of(
-							"spring.r2dbc.username", USERNAME,
-							"spring.r2dbc.password", PASSWORD,
-							"spring.sql.init.mode", "never",
-							"spring.r2dbc.url", "r2dbc:postgresql://postgres:5432/%s".formatted(DATABASE_NAME)
-					)),
-					"PAYMENT_REQUESTS_TOPIC", PAYMENT_REQUESTS,
-					"KAFKA_BOOTSTRAP_SERVERS", "kafka:9092"
-			))
-			.withLogConsumer(new Slf4jLogConsumer(LOGGER).withPrefix("payment-service"));
-
-	private static HikariDataSource dataSource;
-	private static PaymentServiceActions paymentServiceActions;
-	private static AccountBalanceDatabaseActions accountBalanceDatabaseActions;
-
-	@BeforeAll
-	static void init() {
-		createTopics(PAYMENT_REQUESTS, PAYMENT_RESPONSE);
-		initDataSource();
-		paymentServiceActions = new PaymentServiceActions(kafka.getBootstrapServers(), PAYMENT_REQUESTS, PAYMENT_RESPONSE);
-		accountBalanceDatabaseActions = new AccountBalanceDatabaseActions(dataSource);
-	}
-
-	private static void initDataSource() {
-		var config = new HikariConfig();
-		config.setJdbcUrl(postgreSQLContainer.getJdbcUrl());
-		config.setUsername(postgreSQLContainer.getUsername());
-		config.setPassword(postgreSQLContainer.getPassword());
-		config.setAutoCommit(true);
-		dataSource = new HikariDataSource(config);
-	}
-
-	private static void createTopics(String... topics) {
-		var newTopics = Arrays.stream(topics).map(topic -> new NewTopic(topic, 1, (short) 1)).toList();
-		try (var admin = AdminClient.create(Map.of(BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers()))) {
-			admin.createTopics(newTopics);
-		}
-	}
+	@Autowired
+	private AccountBalanceDatabaseActions accountBalanceDatabaseActions;
 
 	@Test
 	@CitrusTest

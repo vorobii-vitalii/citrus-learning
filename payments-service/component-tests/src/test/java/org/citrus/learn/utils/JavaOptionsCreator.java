@@ -1,4 +1,4 @@
-package org.citrus.learn.paymentsservice.utils;
+package org.citrus.learn.utils;
 
 import java.util.Map;
 import java.util.stream.Collectors;

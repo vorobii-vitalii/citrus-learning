@@ -1,1 +1,3 @@
 rootProject.name = 'payments-service'
+include 'component-tests'
+

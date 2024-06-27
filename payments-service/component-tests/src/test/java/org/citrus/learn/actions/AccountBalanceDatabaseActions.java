@@ -1,4 +1,4 @@
-package org.citrus.learn.paymentsservice.actions;
+package org.citrus.learn.actions;
 
 import static org.citrusframework.actions.ExecuteSQLAction.Builder.sql;
 
