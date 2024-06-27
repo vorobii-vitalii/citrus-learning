@@ -42,6 +42,20 @@ services:
     ports:
       - '5432:5432'
 
+  liquibase:
+    image: 'liquibase:4.28.0.1'
+    networks:
+      net:
+    depends_on:
+      - postgres
+    volumes:
+      - ./liquibase/:/liquibase/
+    command: --defaults-file=/liquibase/liquibase.properties update
+    environment:
+      LIQUIBASE_COMMAND_URL: jdbc:postgresql://postgres:5432/mydatabase
+      LIQUIBASE_COMMAND_USERNAME: myuser
+      LIQUIBASE_COMMAND_PASSWORD: secret
+
   payment-service:
     image: 'docker.io/library/payments-service:0.0.1-SNAPSHOT'
     environment:
@@ -54,6 +68,7 @@ services:
     depends_on:
       - postgres
       - kafka1
+      - liquibase
     networks:
       net:
 

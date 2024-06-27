@@ -23,26 +23,37 @@ public abstract class BaseIntegrationTest {
 	private static final String USERNAME = "foo";
 	private static final String PASSWORD = "secret";
 
-	static Network network = Network.newNetwork();
+	public static final Network NETWORK = Network.newNetwork();
 
 	public static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>()
-			.withNetwork(network)
+			.withNetwork(NETWORK)
 			.withNetworkAliases("postgres")
 			.withDatabaseName(DATABASE_NAME)
 			.withUsername(USERNAME)
-			.withPassword(PASSWORD)
-			.withInitScript("init.sql");
+			.withPassword(PASSWORD);
 
 	public static final KafkaContainer KAFKA = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:6.2.1"))
-			.withNetwork(network)
+			.withNetwork(NETWORK)
 			.withNetworkAliases("kafka")
 			.withLogConsumer(new Slf4jLogConsumer(LOGGER).withPrefix("kafka"));
+
+	public static final GenericContainer<?> LIQUIBASE = new GenericContainer<>(DockerImageName.parse("liquibase/liquibase"))
+			.withCommand("--defaults-file=/liquibase/liquibase.properties update")
+			.withCopyFileToContainer(MountableFile.forHostPath("../liquibase"), "/liquibase")
+			.withEnv(Map.of(
+					"LIQUIBASE_COMMAND_URL", "jdbc:postgresql://postgres:5432/" + DATABASE_NAME,
+					"LIQUIBASE_COMMAND_USERNAME", USERNAME,
+					"LIQUIBASE_COMMAND_PASSWORD", PASSWORD
+			))
+			.withNetwork(NETWORK)
+			.dependsOn(POSTGRES)
+			.withLogConsumer(new Slf4jLogConsumer(LOGGER).withPrefix("liquibase"));
 
 	public static final GenericContainer<?> PAYMENT_SERVICE = new GenericContainer<>(new ImageFromDockerfile()
 			.withFileFromPath("/app.jar", Paths.get(MountableFile.forHostPath("../build/libs/app.jar").getResolvedPath()))
 			.withFileFromPath("/Dockerfile", Paths.get(MountableFile.forHostPath("../Dockerfile").getResolvedPath())))
-			.withNetwork(network)
-			.dependsOn(POSTGRES, KAFKA)
+			.withNetwork(NETWORK)
+			.dependsOn(POSTGRES, KAFKA, LIQUIBASE)
 			.withEnv(Map.of(
 					"JAVA_OPTS", JavaOptionsCreator.createOptions(Map.of(
 							"spring.r2dbc.username", USERNAME,
@@ -58,12 +69,15 @@ public abstract class BaseIntegrationTest {
 	static {
 		POSTGRES.start();
 		KAFKA.start();
+		LIQUIBASE.start();
 		PAYMENT_SERVICE.start();
 
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
 			POSTGRES.stop();
 			KAFKA.stop();
 			PAYMENT_SERVICE.stop();
+			LIQUIBASE.stop();
+			NETWORK.close();
 		}));
 	}
 
