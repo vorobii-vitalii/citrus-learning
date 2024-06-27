@@ -1,4 +1,4 @@
-package org.citrus.learn.integration_tests;
+package org.citrus.learn.integration_tests.dto;
 
 import java.util.Map;
 

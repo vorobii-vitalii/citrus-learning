@@ -10,6 +10,7 @@ import java.util.UUID;
 import org.bson.types.ObjectId;
 import org.citrus.learn.integration_tests.actions.MockQuoteServiceActions;
 import org.citrus.learn.integration_tests.domain.ClientPositionCollectionObject;
+import org.citrus.learn.integration_tests.dto.GraphQLRequestWrapper;
 import org.citrus.learn.positionsservice.codegen.client.PositionDetailsGraphQLQuery;
 import org.citrus.learn.positionsservice.codegen.client.PositionDetailsProjectionRoot;
 import org.citrus.learn.positionsservice.codegen.types.ClientId;
@@ -24,9 +25,9 @@ import org.citrusframework.http.message.HttpMessageBuilder;
 import org.citrusframework.junit.jupiter.spring.CitrusSpringSupport;
 import org.citrusframework.message.DefaultMessage;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockserver.client.MockServerClient;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
 import org.springframework.test.context.ContextConfiguration;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -49,14 +50,11 @@ public class PositionServiceIntegrationTest extends BaseIntegrationTest {
 	@CitrusEndpoint(name = "positionsGraphQLServiceEndpoint")
 	Endpoint positionsGraphQLServiceEndpoint;
 
+	@Autowired
 	MockServerClient mockServerClient;
-	MockQuoteServiceActions mockQuoteServiceActions;
 
-	@BeforeEach
-	void init() {
-		mockServerClient = new MockServerClient(MOCK_SERVER.getHost(), MOCK_SERVER.getServerPort());
-		mockQuoteServiceActions = new MockQuoteServiceActions(mockServerClient);
-	}
+	@Autowired
+	MockQuoteServiceActions mockQuoteServiceActions;
 
 	@AfterEach
 	void clearStubs() {
