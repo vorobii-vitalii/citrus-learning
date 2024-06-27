@@ -1,5 +1,6 @@
 package org.citrus.learn.integration_tests;
 
+import static org.citrusframework.actions.ReceiveMessageAction.Builder.receive;
 import static org.citrusframework.actions.SendMessageAction.Builder.send;
 
 import java.math.BigDecimal;
@@ -8,7 +9,6 @@ import java.util.UUID;
 
 import org.bson.types.ObjectId;
 import org.citrus.learn.integration_tests.actions.MockQuoteServiceActions;
-import org.citrus.learn.integration_tests.actions.PositionsGraphQLServiceActions;
 import org.citrus.learn.integration_tests.domain.ClientPositionCollectionObject;
 import org.citrus.learn.positionsservice.codegen.client.PositionDetailsGraphQLQuery;
 import org.citrus.learn.positionsservice.codegen.client.PositionDetailsProjectionRoot;
@@ -19,16 +19,19 @@ import org.citrusframework.annotations.CitrusResource;
 import org.citrusframework.annotations.CitrusTest;
 import org.citrusframework.config.CitrusSpringConfig;
 import org.citrusframework.endpoint.Endpoint;
+import org.citrusframework.http.message.HttpMessage;
+import org.citrusframework.http.message.HttpMessageBuilder;
 import org.citrusframework.junit.jupiter.spring.CitrusSpringSupport;
 import org.citrusframework.message.DefaultMessage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockserver.client.MockServerClient;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpMethod;
 import org.springframework.test.context.ContextConfiguration;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import com.google.gson.Gson;
 import com.netflix.graphql.dgs.client.codegen.GraphQLQueryRequest;
 
 import lombok.extern.slf4j.Slf4j;
@@ -38,20 +41,20 @@ import lombok.extern.slf4j.Slf4j;
 @ContextConfiguration(classes = CitrusSpringConfig.class)
 @Slf4j
 public class PositionServiceIntegrationTest extends BaseIntegrationTest {
+	private final Gson gson = new Gson();
 
 	@CitrusEndpoint(name = "positionsCollectionMongoEndpoint")
 	Endpoint positionsCollectionMongoEndpoint;
 
+	@CitrusEndpoint(name = "positionsGraphQLServiceEndpoint")
+	Endpoint positionsGraphQLServiceEndpoint;
+
 	MockServerClient mockServerClient;
-	PositionsGraphQLServiceActions positionsGraphQLServiceActions;
 	MockQuoteServiceActions mockQuoteServiceActions;
 
 	@BeforeEach
 	void init() {
 		mockServerClient = new MockServerClient(MOCK_SERVER.getHost(), MOCK_SERVER.getServerPort());
-		positionsGraphQLServiceActions = new PositionsGraphQLServiceActions("http://localhost:%s/".formatted(
-				POSITIONS_SERVICE.getMappedPort(GRAPHQL_SERVICE_PORT)
-		));
 		mockQuoteServiceActions = new MockQuoteServiceActions(mockServerClient);
 	}
 
@@ -75,17 +78,22 @@ public class PositionServiceIntegrationTest extends BaseIntegrationTest {
 								.symbol("XBT/USD")
 								.build()
 						)));
-		actions.$(positionsGraphQLServiceActions.performGraphQLRequest(new GraphQLQueryRequest(
-				new PositionDetailsGraphQLQuery.Builder()
-						.clientId(ClientId.newBuilder().id(clientId).build())
-						.build(),
-				new PositionDetailsProjectionRoot<>()
-						.positions()
-						.purchasePrice()
-						.quantity()
-						.symbol()
+		actions.$(send(positionsGraphQLServiceEndpoint).message(new HttpMessageBuilder(
+				new HttpMessage(gson.toJson(new GraphQLRequestWrapper(new GraphQLQueryRequest(
+						new PositionDetailsGraphQLQuery.Builder()
+								.clientId(ClientId.newBuilder().id(clientId).build())
+								.build(),
+						new PositionDetailsProjectionRoot<>()
+								.positions()
+								.purchasePrice()
+								.quantity()
+								.symbol()
+				).serialize(), Map.of())))
+						.method(HttpMethod.POST)
+						.path("/graphql")
+						.contentType("application/json")
 		)));
-		actions.$(positionsGraphQLServiceActions.expectStatusCodeAndBody(HttpStatus.OK, """
+		actions.$(receive(positionsGraphQLServiceEndpoint).message().body("""
 				{
 				    "data": {
 				        "positionDetails": {
@@ -120,18 +128,26 @@ public class PositionServiceIntegrationTest extends BaseIntegrationTest {
 								.symbol("XBT/USD")
 								.build()
 						)));
-		actions.$(positionsGraphQLServiceActions.performGraphQLRequest(new GraphQLQueryRequest(
-				new PositionDetailsGraphQLQuery.Builder()
-						.clientId(ClientId.newBuilder().id(clientId).build())
-						.build(),
-				new PositionDetailsProjectionRoot<>()
-						.positions()
-						.purchasePrice()
-						.quantity()
-						.currentPrice()
-						.symbol()
+		actions.$(send(positionsGraphQLServiceEndpoint).message(new HttpMessageBuilder(
+				new HttpMessage(gson.toJson(new GraphQLRequestWrapper(
+						new GraphQLQueryRequest(
+								new PositionDetailsGraphQLQuery.Builder()
+										.clientId(ClientId.newBuilder().id(clientId).build())
+										.build(),
+								new PositionDetailsProjectionRoot<>()
+										.positions()
+										.purchasePrice()
+										.quantity()
+										.currentPrice()
+										.symbol()
+						).serialize(),
+						Map.of()
+				)))
+						.method(HttpMethod.POST)
+						.path("/graphql")
+						.contentType("application/json")
 		)));
-		actions.$(positionsGraphQLServiceActions.expectStatusCodeAndBody(HttpStatus.OK, """
+		actions.$(receive(positionsGraphQLServiceEndpoint).message().body("""
 				{
 				    "data": {
 				        "positionDetails": {
@@ -166,19 +182,28 @@ public class PositionServiceIntegrationTest extends BaseIntegrationTest {
 						.build()
 				)));
 
-		actions.$(positionsGraphQLServiceActions.performGraphQLRequest(new GraphQLQueryRequest(
-				new PositionDetailsGraphQLQuery.Builder()
-						.clientId(ClientId.newBuilder().id(clientId).build())
-						.build(),
-				new PositionDetailsProjectionRoot<>()
-						.positions()
-						.purchasePrice()
-						.quantity()
-						.symbol()
-						.getParent()
-						.performance()
+		actions.$(send(positionsGraphQLServiceEndpoint).message(new HttpMessageBuilder(
+				new HttpMessage(gson.toJson(new GraphQLRequestWrapper(
+						new GraphQLQueryRequest(
+								new PositionDetailsGraphQLQuery.Builder()
+										.clientId(ClientId.newBuilder().id(clientId).build())
+										.build(),
+								new PositionDetailsProjectionRoot<>()
+										.positions()
+										.purchasePrice()
+										.quantity()
+										.symbol()
+										.getParent()
+										.performance()
+						).serialize(),
+						Map.of()
+				)))
+						.method(HttpMethod.POST)
+						.path("/graphql")
+						.contentType("application/json")
 		)));
-		actions.$(positionsGraphQLServiceActions.expectStatusCodeAndBody(HttpStatus.OK, """
+
+		actions.$(receive(positionsGraphQLServiceEndpoint).message().body("""
 				{
 				    "data": {
 				        "positionDetails": {
