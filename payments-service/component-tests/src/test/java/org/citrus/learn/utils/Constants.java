@@ -1,6 +1,6 @@
 package org.citrus.learn.utils;
 
 public interface Constants {
-	String PAYMENT_REQUESTS = "payment-requests";
-	String PAYMENT_RESPONSE = "payment-responses";
+	String PAYMENT_REQUESTS_TOPIC = "payment-requests";
+	String PAYMENT_RESPONSES_TOPIC = "payment-responses";
 }

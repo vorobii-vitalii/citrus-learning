@@ -1,36 +1,43 @@
 package org.citrus.learn;
 
 import static org.citrusframework.actions.ExecuteSQLAction.Builder.sql;
+import static org.citrusframework.actions.ReceiveMessageAction.Builder.receive;
+import static org.citrusframework.actions.SendMessageAction.Builder.send;
 
 import java.util.UUID;
 
-import org.citrus.learn.actions.AccountBalanceDatabaseActions;
-import org.citrus.learn.actions.PaymentServiceActions;
+import javax.sql.DataSource;
+
+import org.citrus.learn.utils.Constants;
 import org.citrusframework.TestActionRunner;
+import org.citrusframework.annotations.CitrusEndpoint;
 import org.citrusframework.annotations.CitrusResource;
 import org.citrusframework.annotations.CitrusTest;
 import org.citrusframework.config.CitrusSpringConfig;
+import org.citrusframework.endpoint.Endpoint;
 import org.citrusframework.junit.jupiter.spring.CitrusSpringSupport;
+import org.citrusframework.kafka.message.KafkaMessage;
+import org.citrusframework.kafka.message.KafkaMessageHeaders;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import com.zaxxer.hikari.HikariDataSource;
-
 @Testcontainers
 @CitrusSpringSupport
 @ContextConfiguration(classes = CitrusSpringConfig.class)
 public class PaymentServiceIntegrationTest {
+	private static final String REPLY_TO = "kafka_replyTopic";
+	private static final int TIMEOUT_MS = 10000;
+
+	@CitrusEndpoint(name = "paymentRequestsTopicEndpoint")
+	Endpoint paymentRequestsTopicEndpoint;
+
+	@CitrusEndpoint(name = "paymentResponsesTopicEndpoint")
+	Endpoint paymentResponsesTopicEndpoint;
 
 	@Autowired
-	private HikariDataSource dataSource;
-
-	@Autowired
-	private PaymentServiceActions paymentServiceActions;
-
-	@Autowired
-	private AccountBalanceDatabaseActions accountBalanceDatabaseActions;
+	DataSource dataSource;
 
 	@Test
 	@CitrusTest
@@ -42,12 +49,29 @@ public class PaymentServiceIntegrationTest {
 			builder.setVariable("transactionAmount", "100");
 			builder.setVariable("expectedTransactionStatus", "SENDER_NOT_FOUND");
 		});
-		actions.$(accountBalanceDatabaseActions.cleanExistingBalances());
+		actions.$(sql().dataSource(dataSource).statement("delete from user_balance"));
 		actions.$(sql().dataSource(dataSource)
 				.statement("delete from transactions")
 				.statement("delete from user_info"));
-		actions.$(paymentServiceActions.sendPaymentRequest());
-		actions.$(paymentServiceActions.expectResponseWithCorrectStatus());
+		actions.$(send(paymentRequestsTopicEndpoint)
+				.message(new KafkaMessage("""
+						{
+							"transactionId": "${transactionId}",
+							"fromAccountId": ${fromAccountId},
+							"toAccountId": ${toAccountId},
+							"amount": ${transactionAmount}
+						}
+						""")
+						.setHeader(REPLY_TO, Constants.PAYMENT_RESPONSES_TOPIC)));
+		actions.$(receive(paymentResponsesTopicEndpoint)
+				.timeout(TIMEOUT_MS)
+				.message(new KafkaMessage("""
+						{
+							"transactionId": "${transactionId}",
+							"transactionStatus": "${expectedTransactionStatus}"
+						}
+						"""))
+				.header(KafkaMessageHeaders.TOPIC, Constants.PAYMENT_RESPONSES_TOPIC));
 	}
 
 	@Test
@@ -62,12 +86,36 @@ public class PaymentServiceIntegrationTest {
 			builder.setVariable("expectedSenderBalanceAfterTransaction", "900");
 			builder.setVariable("expectedTransactionStatus", "RECEIVER_NOT_FOUND");
 		});
-		actions.$(accountBalanceDatabaseActions.cleanExistingBalances());
-		actions.$(accountBalanceDatabaseActions.insertBalanceForSender());
+		actions.$(sql().dataSource(dataSource).statement("delete from user_balance"));
+		actions.$(sql()
+				.dataSource(dataSource)
+				.statement("insert into user_balance(user_id, user_balance) "
+						+ "values (${fromAccountId}, ${fromAccountBalanceBeforeTransaction})"));
 		actions.$(sql().dataSource(dataSource).statement("delete from user_info"));
-		actions.$(paymentServiceActions.sendPaymentRequest());
-		actions.$(paymentServiceActions.expectResponseWithCorrectStatus());
-		actions.$(accountBalanceDatabaseActions.verifyBalanceOfSender());
+		actions.$(send(paymentRequestsTopicEndpoint)
+				.message(new KafkaMessage("""
+						{
+							"transactionId": "${transactionId}",
+							"fromAccountId": ${fromAccountId},
+							"toAccountId": ${toAccountId},
+							"amount": ${transactionAmount}
+						}
+						""")
+						.setHeader(REPLY_TO, Constants.PAYMENT_RESPONSES_TOPIC)));
+		actions.$(receive(paymentResponsesTopicEndpoint)
+				.timeout(TIMEOUT_MS)
+				.message(new KafkaMessage("""
+						{
+							"transactionId": "${transactionId}",
+							"transactionStatus": "${expectedTransactionStatus}"
+						}
+						"""))
+				.header(KafkaMessageHeaders.TOPIC, Constants.PAYMENT_RESPONSES_TOPIC));
+		actions.$(sql()
+				.dataSource(dataSource)
+				.query()
+				.statement("select u.user_balance as balance from user_balance u where user_id = ${fromAccountId}")
+				.validate("balance", "${expectedSenderBalanceAfterTransaction}"));
 	}
 
 	@Test
@@ -84,17 +132,48 @@ public class PaymentServiceIntegrationTest {
 			builder.setVariable("expectedReceiverBalanceAfterTransaction", "900");
 			builder.setVariable("expectedTransactionStatus", "INSUFFICIENT_FUNDS");
 		});
-		actions.$(accountBalanceDatabaseActions.cleanExistingBalances());
-		actions.$(accountBalanceDatabaseActions.insertBalanceForSender());
-		actions.$(accountBalanceDatabaseActions.insertBalanceForReceiver());
+		actions.$(sql().dataSource(dataSource).statement("delete from user_balance"));
+		actions.$(sql()
+				.dataSource(dataSource)
+				.statement("insert into user_balance(user_id, user_balance) "
+						+ "values (${fromAccountId}, ${fromAccountBalanceBeforeTransaction})"));
+		actions.$(sql()
+				.dataSource(dataSource)
+				.statement("insert into user_balance(user_id, user_balance) "
+						+ "values (${toAccountId}, ${toAccountBalanceBeforeTransaction})"));
 		actions.$(sql().dataSource(dataSource)
 				.statement("delete from transactions")
 				.statement("delete from user_info")
 		);
-		actions.$(paymentServiceActions.sendPaymentRequest());
-		actions.$(paymentServiceActions.expectResponseWithCorrectStatus());
-		actions.$(accountBalanceDatabaseActions.verifyBalanceOfSender());
-		actions.$(accountBalanceDatabaseActions.verifyBalanceOfReceiver());
+		actions.$(send(paymentRequestsTopicEndpoint)
+				.message(new KafkaMessage("""
+						{
+							"transactionId": "${transactionId}",
+							"fromAccountId": ${fromAccountId},
+							"toAccountId": ${toAccountId},
+							"amount": ${transactionAmount}
+						}
+						""")
+						.setHeader(REPLY_TO, Constants.PAYMENT_RESPONSES_TOPIC)));
+		actions.$(receive(paymentResponsesTopicEndpoint)
+				.timeout(TIMEOUT_MS)
+				.message(new KafkaMessage("""
+						{
+							"transactionId": "${transactionId}",
+							"transactionStatus": "${expectedTransactionStatus}"
+						}
+						"""))
+				.header(KafkaMessageHeaders.TOPIC, Constants.PAYMENT_RESPONSES_TOPIC));
+		actions.$(sql()
+				.dataSource(dataSource)
+				.query()
+				.statement("select u.user_balance as balance from user_balance u where user_id = ${fromAccountId}")
+				.validate("balance", "${expectedSenderBalanceAfterTransaction}"));
+		actions.$(sql()
+				.dataSource(dataSource)
+				.query()
+				.statement("select u.user_balance as balance from user_balance u where user_id = ${toAccountId}")
+				.validate("balance", "${expectedReceiverBalanceAfterTransaction}"));
 	}
 
 	@Test
@@ -111,9 +190,15 @@ public class PaymentServiceIntegrationTest {
 			builder.setVariable("expectedReceiverBalanceAfterTransaction", "900");
 			builder.setVariable("expectedTransactionStatus", "SENDER_BLOCKED");
 		});
-		actions.$(accountBalanceDatabaseActions.cleanExistingBalances());
-		actions.$(accountBalanceDatabaseActions.insertBalanceForSender());
-		actions.$(accountBalanceDatabaseActions.insertBalanceForReceiver());
+		actions.$(sql().dataSource(dataSource).statement("delete from user_balance"));
+		actions.$(sql()
+				.dataSource(dataSource)
+				.statement("insert into user_balance(user_id, user_balance) "
+						+ "values (${fromAccountId}, ${fromAccountBalanceBeforeTransaction})"));
+		actions.$(sql()
+				.dataSource(dataSource)
+				.statement("insert into user_balance(user_id, user_balance) "
+						+ "values (${toAccountId}, ${toAccountBalanceBeforeTransaction})"));
 		actions.$(sql().dataSource(dataSource)
 				.statement("delete from transactions")
 				.statement("delete from user_info")
@@ -122,10 +207,35 @@ public class PaymentServiceIntegrationTest {
 				.statement("insert into user_info(user_id, is_blocked) "
 						+ "values (${toAccountId}, false)")
 		);
-		actions.$(paymentServiceActions.sendPaymentRequest());
-		actions.$(paymentServiceActions.expectResponseWithCorrectStatus());
-		actions.$(accountBalanceDatabaseActions.verifyBalanceOfSender());
-		actions.$(accountBalanceDatabaseActions.verifyBalanceOfReceiver());
+		actions.$(send(paymentRequestsTopicEndpoint)
+				.message(new KafkaMessage("""
+						{
+							"transactionId": "${transactionId}",
+							"fromAccountId": ${fromAccountId},
+							"toAccountId": ${toAccountId},
+							"amount": ${transactionAmount}
+						}
+						""")
+						.setHeader(REPLY_TO, Constants.PAYMENT_RESPONSES_TOPIC)));
+		actions.$(receive(paymentResponsesTopicEndpoint)
+				.timeout(TIMEOUT_MS)
+				.message(new KafkaMessage("""
+						{
+							"transactionId": "${transactionId}",
+							"transactionStatus": "${expectedTransactionStatus}"
+						}
+						"""))
+				.header(KafkaMessageHeaders.TOPIC, Constants.PAYMENT_RESPONSES_TOPIC));
+		actions.$(sql()
+				.dataSource(dataSource)
+				.query()
+				.statement("select u.user_balance as balance from user_balance u where user_id = ${fromAccountId}")
+				.validate("balance", "${expectedSenderBalanceAfterTransaction}"));
+		actions.$(sql()
+				.dataSource(dataSource)
+				.query()
+				.statement("select u.user_balance as balance from user_balance u where user_id = ${toAccountId}")
+				.validate("balance", "${expectedReceiverBalanceAfterTransaction}"));
 	}
 
 	@Test
@@ -142,9 +252,15 @@ public class PaymentServiceIntegrationTest {
 			builder.setVariable("expectedReceiverBalanceAfterTransaction", "900");
 			builder.setVariable("expectedTransactionStatus", "RECEIVER_BLOCKED");
 		});
-		actions.$(accountBalanceDatabaseActions.cleanExistingBalances());
-		actions.$(accountBalanceDatabaseActions.insertBalanceForSender());
-		actions.$(accountBalanceDatabaseActions.insertBalanceForReceiver());
+		actions.$(sql().dataSource(dataSource).statement("delete from user_balance"));
+		actions.$(sql()
+				.dataSource(dataSource)
+				.statement("insert into user_balance(user_id, user_balance) "
+						+ "values (${fromAccountId}, ${fromAccountBalanceBeforeTransaction})"));
+		actions.$(sql()
+				.dataSource(dataSource)
+				.statement("insert into user_balance(user_id, user_balance) "
+						+ "values (${toAccountId}, ${toAccountBalanceBeforeTransaction})"));
 		actions.$(sql().dataSource(dataSource)
 				.statement("delete from transactions")
 				.statement("delete from user_info")
@@ -153,10 +269,35 @@ public class PaymentServiceIntegrationTest {
 				.statement("insert into user_info(user_id, is_blocked) "
 						+ "values (${toAccountId}, true)")
 		);
-		actions.$(paymentServiceActions.sendPaymentRequest());
-		actions.$(paymentServiceActions.expectResponseWithCorrectStatus());
-		actions.$(accountBalanceDatabaseActions.verifyBalanceOfSender());
-		actions.$(accountBalanceDatabaseActions.verifyBalanceOfReceiver());
+		actions.$(send(paymentRequestsTopicEndpoint)
+				.message(new KafkaMessage("""
+						{
+							"transactionId": "${transactionId}",
+							"fromAccountId": ${fromAccountId},
+							"toAccountId": ${toAccountId},
+							"amount": ${transactionAmount}
+						}
+						""")
+						.setHeader(REPLY_TO, Constants.PAYMENT_RESPONSES_TOPIC)));
+		actions.$(receive(paymentResponsesTopicEndpoint)
+				.timeout(TIMEOUT_MS)
+				.message(new KafkaMessage("""
+						{
+							"transactionId": "${transactionId}",
+							"transactionStatus": "${expectedTransactionStatus}"
+						}
+						"""))
+				.header(KafkaMessageHeaders.TOPIC, Constants.PAYMENT_RESPONSES_TOPIC));
+		actions.$(sql()
+				.dataSource(dataSource)
+				.query()
+				.statement("select u.user_balance as balance from user_balance u where user_id = ${fromAccountId}")
+				.validate("balance", "${expectedSenderBalanceAfterTransaction}"));
+		actions.$(sql()
+				.dataSource(dataSource)
+				.query()
+				.statement("select u.user_balance as balance from user_balance u where user_id = ${toAccountId}")
+				.validate("balance", "${expectedReceiverBalanceAfterTransaction}"));
 	}
 
 	@Test
@@ -173,9 +314,15 @@ public class PaymentServiceIntegrationTest {
 			builder.setVariable("expectedSenderBalanceAfterTransaction", "30");
 			builder.setVariable("expectedReceiverBalanceAfterTransaction", "1000");
 		});
-		actions.$(accountBalanceDatabaseActions.cleanExistingBalances());
-		actions.$(accountBalanceDatabaseActions.insertBalanceForSender());
-		actions.$(accountBalanceDatabaseActions.insertBalanceForReceiver());
+		actions.$(sql().dataSource(dataSource).statement("delete from user_balance"));
+		actions.$(sql()
+				.dataSource(dataSource)
+				.statement("insert into user_balance(user_id, user_balance) "
+						+ "values (${fromAccountId}, ${fromAccountBalanceBeforeTransaction})"));
+		actions.$(sql()
+				.dataSource(dataSource)
+				.statement("insert into user_balance(user_id, user_balance) "
+						+ "values (${toAccountId}, ${toAccountBalanceBeforeTransaction})"));
 		actions.$(sql().dataSource(dataSource)
 				.statement("delete from transactions")
 				.statement("delete from user_info")
@@ -184,10 +331,35 @@ public class PaymentServiceIntegrationTest {
 				.statement("insert into user_info(user_id, is_blocked) "
 						+ "values (${toAccountId}, false)")
 		);
-		actions.$(paymentServiceActions.sendPaymentRequest());
-		actions.$(paymentServiceActions.expectResponseWithCorrectStatus());
-		actions.$(accountBalanceDatabaseActions.verifyBalanceOfSender());
-		actions.$(accountBalanceDatabaseActions.verifyBalanceOfReceiver());
+		actions.$(send(paymentRequestsTopicEndpoint)
+				.message(new KafkaMessage("""
+						{
+							"transactionId": "${transactionId}",
+							"fromAccountId": ${fromAccountId},
+							"toAccountId": ${toAccountId},
+							"amount": ${transactionAmount}
+						}
+						""")
+						.setHeader(REPLY_TO, Constants.PAYMENT_RESPONSES_TOPIC)));
+		actions.$(receive(paymentResponsesTopicEndpoint)
+				.timeout(TIMEOUT_MS)
+				.message(new KafkaMessage("""
+						{
+							"transactionId": "${transactionId}",
+							"transactionStatus": "${expectedTransactionStatus}"
+						}
+						"""))
+				.header(KafkaMessageHeaders.TOPIC, Constants.PAYMENT_RESPONSES_TOPIC));
+		actions.$(sql()
+				.dataSource(dataSource)
+				.query()
+				.statement("select u.user_balance as balance from user_balance u where user_id = ${fromAccountId}")
+				.validate("balance", "${expectedSenderBalanceAfterTransaction}"));
+		actions.$(sql()
+				.dataSource(dataSource)
+				.query()
+				.statement("select u.user_balance as balance from user_balance u where user_id = ${toAccountId}")
+				.validate("balance", "${expectedReceiverBalanceAfterTransaction}"));
 	}
 
 	@Test
@@ -204,9 +376,15 @@ public class PaymentServiceIntegrationTest {
 			builder.setVariable("expectedSenderBalanceAfterTransaction", "4900");
 			builder.setVariable("expectedReceiverBalanceAfterTransaction", "1000");
 		});
-		actions.$(accountBalanceDatabaseActions.cleanExistingBalances());
-		actions.$(accountBalanceDatabaseActions.insertBalanceForSender());
-		actions.$(accountBalanceDatabaseActions.insertBalanceForReceiver());
+		actions.$(sql().dataSource(dataSource).statement("delete from user_balance"));
+		actions.$(sql()
+				.dataSource(dataSource)
+				.statement("insert into user_balance(user_id, user_balance) "
+						+ "values (${fromAccountId}, ${fromAccountBalanceBeforeTransaction})"));
+		actions.$(sql()
+				.dataSource(dataSource)
+				.statement("insert into user_balance(user_id, user_balance) "
+						+ "values (${toAccountId}, ${toAccountBalanceBeforeTransaction})"));
 		actions.$(sql().dataSource(dataSource)
 				.statement("delete from transactions")
 				.statement("delete from user_info")
@@ -216,11 +394,36 @@ public class PaymentServiceIntegrationTest {
 						+ "values (${toAccountId}, false)")
 		);
 		for (int i = 0; i < 5; i++) {
-			actions.$(paymentServiceActions.sendPaymentRequest());
-			actions.$(paymentServiceActions.expectResponseWithCorrectStatus());
+			actions.$(send(paymentRequestsTopicEndpoint)
+					.message(new KafkaMessage("""
+							{
+								"transactionId": "${transactionId}",
+								"fromAccountId": ${fromAccountId},
+								"toAccountId": ${toAccountId},
+								"amount": ${transactionAmount}
+							}
+							""")
+							.setHeader(REPLY_TO, Constants.PAYMENT_RESPONSES_TOPIC)));
+			actions.$(receive(paymentResponsesTopicEndpoint)
+					.timeout(TIMEOUT_MS)
+					.message(new KafkaMessage("""
+							{
+								"transactionId": "${transactionId}",
+								"transactionStatus": "${expectedTransactionStatus}"
+							}
+							"""))
+					.header(KafkaMessageHeaders.TOPIC, Constants.PAYMENT_RESPONSES_TOPIC));
 		}
-		actions.$(accountBalanceDatabaseActions.verifyBalanceOfSender());
-		actions.$(accountBalanceDatabaseActions.verifyBalanceOfReceiver());
+		actions.$(sql()
+				.dataSource(dataSource)
+				.query()
+				.statement("select u.user_balance as balance from user_balance u where user_id = ${fromAccountId}")
+				.validate("balance", "${expectedSenderBalanceAfterTransaction}"));
+		actions.$(sql()
+				.dataSource(dataSource)
+				.query()
+				.statement("select u.user_balance as balance from user_balance u where user_id = ${toAccountId}")
+				.validate("balance", "${expectedReceiverBalanceAfterTransaction}"));
 	}
 
 }

@@ -1,6 +1,6 @@
 package org.citrus.learn;
 
-import static org.citrus.learn.utils.Constants.PAYMENT_REQUESTS;
+import static org.citrus.learn.utils.Constants.PAYMENT_REQUESTS_TOPIC;
 
 import java.nio.file.Paths;
 import java.util.Map;
@@ -61,7 +61,7 @@ public abstract class BaseIntegrationTest {
 							"spring.sql.init.mode", "never",
 							"spring.r2dbc.url", "r2dbc:postgresql://postgres:5432/%s".formatted(DATABASE_NAME)
 					)),
-					"PAYMENT_REQUESTS_TOPIC", PAYMENT_REQUESTS,
+					"PAYMENT_REQUESTS_TOPIC", PAYMENT_REQUESTS_TOPIC,
 					"KAFKA_BOOTSTRAP_SERVERS", "kafka:9092"
 			))
 			.withLogConsumer(new Slf4jLogConsumer(LOGGER).withPrefix("payment-service"));
