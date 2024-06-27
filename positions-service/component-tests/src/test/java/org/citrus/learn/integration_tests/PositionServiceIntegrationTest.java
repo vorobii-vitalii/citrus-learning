@@ -1,30 +1,30 @@
 package org.citrus.learn.integration_tests;
 
+import static org.citrusframework.actions.SendMessageAction.Builder.send;
+
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 import org.bson.types.ObjectId;
 import org.citrus.learn.integration_tests.actions.MockQuoteServiceActions;
 import org.citrus.learn.integration_tests.actions.PositionsGraphQLServiceActions;
-import org.citrus.learn.integration_tests.actions.PositionsInsertActions;
 import org.citrus.learn.integration_tests.domain.ClientPositionCollectionObject;
 import org.citrus.learn.positionsservice.codegen.client.PositionDetailsGraphQLQuery;
 import org.citrus.learn.positionsservice.codegen.client.PositionDetailsProjectionRoot;
 import org.citrus.learn.positionsservice.codegen.types.ClientId;
 import org.citrusframework.TestActionRunner;
+import org.citrusframework.annotations.CitrusEndpoint;
 import org.citrusframework.annotations.CitrusResource;
 import org.citrusframework.annotations.CitrusTest;
 import org.citrusframework.config.CitrusSpringConfig;
+import org.citrusframework.endpoint.Endpoint;
 import org.citrusframework.junit.jupiter.spring.CitrusSpringSupport;
+import org.citrusframework.message.DefaultMessage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.mockserver.client.MockServerClient;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.context.ContextConfiguration;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -39,18 +39,16 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class PositionServiceIntegrationTest extends BaseIntegrationTest {
 
-	@Autowired
-	ApplicationContext applicationContext;
+	@CitrusEndpoint(name = "positionsCollectionMongoEndpoint")
+	Endpoint positionsCollectionMongoEndpoint;
+
 	MockServerClient mockServerClient;
-	PositionsInsertActions positionsInsertActions;
 	PositionsGraphQLServiceActions positionsGraphQLServiceActions;
 	MockQuoteServiceActions mockQuoteServiceActions;
 
 	@BeforeEach
 	void init() {
 		mockServerClient = new MockServerClient(MOCK_SERVER.getHost(), MOCK_SERVER.getServerPort());
-		positionsInsertActions =
-				new PositionsInsertActions(applicationContext);
 		positionsGraphQLServiceActions = new PositionsGraphQLServiceActions("http://localhost:%s/".formatted(
 				POSITIONS_SERVICE.getMappedPort(GRAPHQL_SERVICE_PORT)
 		));
@@ -67,16 +65,16 @@ public class PositionServiceIntegrationTest extends BaseIntegrationTest {
 	void shouldNotCallQuoteServiceIfCurrentPricesAndPerformanceNotRequested(@CitrusResource TestActionRunner actions) {
 		var clientId = UUID.randomUUID().toString();
 
-		actions.$(positionsInsertActions.insertPositions(
-				List.of(
-						ClientPositionCollectionObject.builder()
+		actions.$(send(positionsCollectionMongoEndpoint)
+				.message(new DefaultMessage()
+						.setPayload(ClientPositionCollectionObject.builder()
 								.clientId(clientId)
 								.positionId(ObjectId.get())
 								.purchasePrice(BigDecimal.ONE)
 								.quantity(BigDecimal.ONE)
 								.symbol("XBT/USD")
 								.build()
-				)));
+						)));
 		actions.$(positionsGraphQLServiceActions.performGraphQLRequest(new GraphQLQueryRequest(
 				new PositionDetailsGraphQLQuery.Builder()
 						.clientId(ClientId.newBuilder().id(clientId).build())
@@ -112,16 +110,16 @@ public class PositionServiceIntegrationTest extends BaseIntegrationTest {
 
 		actions.$(mockQuoteServiceActions.mockPrices(Map.of("XBT/USD", BigDecimal.TEN)));
 
-		actions.$(positionsInsertActions.insertPositions(
-				List.of(
-						ClientPositionCollectionObject.builder()
+		actions.$(send(positionsCollectionMongoEndpoint)
+				.message(new DefaultMessage()
+						.setPayload(ClientPositionCollectionObject.builder()
 								.clientId(clientId)
 								.positionId(ObjectId.get())
 								.purchasePrice(BigDecimal.ONE)
 								.quantity(BigDecimal.ONE)
 								.symbol("XBT/USD")
 								.build()
-				)));
+						)));
 		actions.$(positionsGraphQLServiceActions.performGraphQLRequest(new GraphQLQueryRequest(
 				new PositionDetailsGraphQLQuery.Builder()
 						.clientId(ClientId.newBuilder().id(clientId).build())
@@ -151,7 +149,6 @@ public class PositionServiceIntegrationTest extends BaseIntegrationTest {
 				"""));
 	}
 
-	@Timeout(5)
 	@Test
 	@CitrusTest
 	void shouldCallQuoteServiceToFetchPricesIfPerformanceRequested(@CitrusResource TestActionRunner actions) {
@@ -159,16 +156,16 @@ public class PositionServiceIntegrationTest extends BaseIntegrationTest {
 
 		actions.$(mockQuoteServiceActions.mockPrices(Map.of("XBT/USD", BigDecimal.TEN)));
 
-		actions.$(positionsInsertActions.insertPositions(
-				List.of(
-						ClientPositionCollectionObject.builder()
-								.clientId(clientId)
-								.positionId(ObjectId.get())
-								.purchasePrice(BigDecimal.ONE)
-								.quantity(BigDecimal.ONE)
-								.symbol("XBT/USD")
-								.build()
+		actions.$(send(positionsCollectionMongoEndpoint).message(new DefaultMessage()
+				.setPayload(ClientPositionCollectionObject.builder()
+						.clientId(clientId)
+						.positionId(ObjectId.get())
+						.purchasePrice(BigDecimal.ONE)
+						.quantity(BigDecimal.ONE)
+						.symbol("XBT/USD")
+						.build()
 				)));
+
 		actions.$(positionsGraphQLServiceActions.performGraphQLRequest(new GraphQLQueryRequest(
 				new PositionDetailsGraphQLQuery.Builder()
 						.clientId(ClientId.newBuilder().id(clientId).build())

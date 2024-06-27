@@ -60,6 +60,7 @@ public abstract class BaseIntegrationTest {
 			MOCK_SERVER.stop();
 			MONGO.stop();
 			POSITIONS_SERVICE.stop();
+			NETWORK.close();
 		}));
 	}
 
