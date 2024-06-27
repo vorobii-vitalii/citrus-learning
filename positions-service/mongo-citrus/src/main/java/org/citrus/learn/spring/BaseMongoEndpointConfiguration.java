@@ -8,7 +8,7 @@ import org.springframework.integration.dsl.context.IntegrationFlowContext;
 public class BaseMongoEndpointConfiguration {
 
 	@Bean
-	public IntegrationFlowRegistrar integrationFlowRegistrar(IntegrationFlowContext integrationFlowContext) {
+	IntegrationFlowRegistrar integrationFlowRegistrar(IntegrationFlowContext integrationFlowContext) {
 		return new IntegrationFlowRegistrar(integrationFlowContext);
 	}
 
