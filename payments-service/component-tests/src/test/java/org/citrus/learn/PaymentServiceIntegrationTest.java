@@ -264,10 +264,8 @@ public class PaymentServiceIntegrationTest {
 		actions.$(sql().dataSource(dataSource)
 				.statement("delete from transactions")
 				.statement("delete from user_info")
-				.statement("insert into user_info(user_id, is_blocked) "
-						+ "values (${fromAccountId}, false)")
-				.statement("insert into user_info(user_id, is_blocked) "
-						+ "values (${toAccountId}, true)")
+				.statement("insert into user_info(user_id, is_blocked) values (${fromAccountId}, false)")
+				.statement("insert into user_info(user_id, is_blocked) values (${toAccountId}, true)")
 		);
 		actions.$(send(paymentRequestsTopicEndpoint)
 				.message(new KafkaMessage("""
