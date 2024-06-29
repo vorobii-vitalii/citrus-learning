@@ -2,7 +2,6 @@ package org.citrus.learn.paymentsservice.config;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Consumer;
 
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.NewTopic;
@@ -17,29 +16,23 @@ public class KafkaTopicConfig {
 	@Value(value = "${spring.kafka.bootstrap-servers}")
 	private String bootstrapAddress;
 
-	@Value(value = "${spring.kafka.security.protocol:}")
+	@Value(value = "${spring.kafka.security.protocol:#{null}}")
 	private String kafkaSecurityProtocol;
 
-	@Value(value = "${spring.kafka.sasl.mechanism:}")
+	@Value(value = "${spring.kafka.sasl.mechanism:#{null}}")
 	private String saslMechanism;
 
-	@Value(value = "${spring.kafka.sasl.jaas.config:}")
+	@Value(value = "${spring.kafka.sasl.jaas.config:#{null}}")
 	private String saslJaasConfig;
 
 	@Bean
 	public KafkaAdmin kafkaAdmin() {
 		Map<String, Object> configs = new HashMap<>();
 		configs.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapAddress);
-		ifSet(v -> configs.put("security.protocol", v), kafkaSecurityProtocol);
-		ifSet(v -> configs.put("sasl.mechanism", v), saslMechanism);
-		ifSet(v -> configs.put("sasl.jaas.config", v), saslJaasConfig);
+		configs.put("security.protocol", kafkaSecurityProtocol);
+		configs.put("sasl.mechanism", saslMechanism);
+		configs.put("sasl.jaas.config", saslJaasConfig);
 		return new KafkaAdmin(configs);
-	}
-
-	private void ifSet(Consumer<String> consumer, String v) {
-		if (v != null && !v.isEmpty()) {
-			consumer.accept(v);
-		}
 	}
 
 	@Bean

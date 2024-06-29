@@ -2,7 +2,6 @@ package org.citrus.learn.paymentsservice.config;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Consumer;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -22,13 +21,13 @@ public class KafkaConsumerConfig {
 	@Value(value = "${spring.kafka.bootstrap-servers}")
 	private String bootstrapAddress;
 
-	@Value(value = "${spring.kafka.security.protocol:}")
+	@Value(value = "${spring.kafka.security.protocol:#{null}}")
 	private String kafkaSecurityProtocol;
 
-	@Value(value = "${spring.kafka.sasl.mechanism:}")
+	@Value(value = "${spring.kafka.sasl.mechanism:#{null}}")
 	private String saslMechanism;
 
-	@Value(value = "${spring.kafka.sasl.jaas.config:}")
+	@Value(value = "${spring.kafka.sasl.jaas.config:#{null}}")
 	private String saslJaasConfig;
 
 	@Bean
@@ -37,16 +36,10 @@ public class KafkaConsumerConfig {
 		props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapAddress);
 		props.put(ConsumerConfig.GROUP_ID_CONFIG, "payment-service");
 		props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-		ifSet(v -> props.put("security.protocol", v), kafkaSecurityProtocol);
-		ifSet(v -> props.put("sasl.mechanism", v), saslMechanism);
-		ifSet(v -> props.put("sasl.jaas.config", v), saslJaasConfig);
+		props.put("security.protocol", kafkaSecurityProtocol);
+		props.put("sasl.mechanism", saslMechanism);
+		props.put("sasl.jaas.config", saslJaasConfig);
 		return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), new JsonDeserializer<>(PaymentRequest.class));
-	}
-
-	private void ifSet(Consumer<String> consumer, String v) {
-		if (v != null && !v.isEmpty()) {
-			consumer.accept(v);
-		}
 	}
 
 	@Bean
