@@ -2,6 +2,7 @@ package org.citrus.learn.paymentsservice.config;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
@@ -20,13 +21,13 @@ public class KafkaProducerConfig {
 	@Value(value = "${spring.kafka.bootstrap-servers}")
 	private String bootstrapAddress;
 
-	@Value(value = "${spring.kafka.security.protocol}")
+	@Value(value = "${spring.kafka.security.protocol:}")
 	private String kafkaSecurityProtocol;
 
-	@Value(value = "${spring.kafka.sasl.mechanism}")
+	@Value(value = "${spring.kafka.sasl.mechanism:}")
 	private String saslMechanism;
 
-	@Value(value = "${spring.kafka.sasl.jaas.config}")
+	@Value(value = "${spring.kafka.sasl.jaas.config:}")
 	private String saslJaasConfig;
 
 	@Bean
@@ -34,10 +35,16 @@ public class KafkaProducerConfig {
 		Map<String, Object> props = new HashMap<>();
 		props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapAddress);
 		props.put(ProducerConfig.LINGER_MS_CONFIG, LINGER_MS);
-		props.put("security.protocol", kafkaSecurityProtocol);
-		props.put("sasl.mechanism", saslMechanism);
-		props.put("sasl.jaas.config", saslJaasConfig);
+		ifSet(v -> props.put("security.protocol", v), kafkaSecurityProtocol);
+		ifSet(v -> props.put("sasl.mechanism", v), saslMechanism);
+		ifSet(v -> props.put("sasl.jaas.config", v), saslJaasConfig);
 		return props;
+	}
+
+	private void ifSet(Consumer<String> consumer, String v) {
+		if (v != null && !v.isEmpty()) {
+			consumer.accept(v);
+		}
 	}
 
 	@Bean
