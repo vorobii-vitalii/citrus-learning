@@ -21,12 +21,24 @@ public class KafkaConsumerConfig {
 	@Value(value = "${spring.kafka.bootstrap-servers}")
 	private String bootstrapAddress;
 
+	@Value(value = "${spring.kafka.security.protocol}")
+	private String kafkaSecurityProtocol;
+
+	@Value(value = "${spring.kafka.sasl.mechanism}")
+	private String saslMechanism;
+
+	@Value(value = "${spring.kafka.sasl.jaas.config}")
+	private String saslJaasConfig;
+
 	@Bean
 	public ConsumerFactory<String, PaymentRequest> consumerFactory() {
 		Map<String, Object> props = new HashMap<>();
 		props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapAddress);
 		props.put(ConsumerConfig.GROUP_ID_CONFIG, "payment-service");
 		props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+		props.put("security.protocol", kafkaSecurityProtocol);
+		props.put("sasl.mechanism", saslMechanism);
+		props.put("sasl.jaas.config", saslJaasConfig);
 		return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), new JsonDeserializer<>(PaymentRequest.class));
 	}
 

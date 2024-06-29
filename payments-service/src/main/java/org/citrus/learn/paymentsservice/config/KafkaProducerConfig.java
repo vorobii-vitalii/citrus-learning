@@ -20,11 +20,23 @@ public class KafkaProducerConfig {
 	@Value(value = "${spring.kafka.bootstrap-servers}")
 	private String bootstrapAddress;
 
+	@Value(value = "${spring.kafka.security.protocol}")
+	private String kafkaSecurityProtocol;
+
+	@Value(value = "${spring.kafka.sasl.mechanism}")
+	private String saslMechanism;
+
+	@Value(value = "${spring.kafka.sasl.jaas.config}")
+	private String saslJaasConfig;
+
 	@Bean
 	public Map<String, Object> producerConfigs() {
 		Map<String, Object> props = new HashMap<>();
 		props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapAddress);
 		props.put(ProducerConfig.LINGER_MS_CONFIG, LINGER_MS);
+		props.put("security.protocol", kafkaSecurityProtocol);
+		props.put("sasl.mechanism", saslMechanism);
+		props.put("sasl.jaas.config", saslJaasConfig);
 		return props;
 	}
 

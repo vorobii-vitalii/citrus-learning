@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+  namespace: trading-system
+  labels:
+    app: payment-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: payment-service
+  template:
+    metadata:
+      name: payment-service
+      labels:
+        app: payment-service
+    spec:
+      containers:
+        - name: payment-service
+          image: docker.io/library/payments-service:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DB_USERNAME
+              value: postgres
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: postgres-password
+                  name: postgres-postgresql
+            - name: DB_NAME
+              value: postgres
+            - name: DB_HOST
+              value: postgres-postgresql.trading-system.svc.cluster.local
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: kafka-controller-0.kafka-controller-headless.trading-system.svc.cluster.local:9092,kafka-controller-1.kafka-controller-headless.trading-system.svc.cluster.local:9092,kafka-controller-2.kafka-controller-headless.trading-system.svc.cluster.local:9092
+            - name: KAFKA_USERNAME
+              value: user1
+            - name: KAFKA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: client-passwords
+                  name: kafka-user-passwords
+            - name: JAVA_OPTS
+              value: |
+                -Dspring.r2dbc.username=$(DB_USERNAME)
+                -Dspring.r2dbc.password=$(DB_PASSWORD)
+                -Dspring.r2dbc.url=r2dbc:postgresql://$(DB_HOST):5432/$(DB_NAME)
+                -Dspring.sql.init.mode=always
+                -Dspring.kafka.bootstrap-servers=$(KAFKA_BOOTSTRAP_SERVERS)
+                -Dspring.kafka.security.protocol=SASL_PLAINTEXT
+                -Dspring.kafka.sasl.mechanism=SCRAM-SHA-256
+                -Dspring.kafka.sasl.jaas.config='org.apache.kafka.common.security.scram.ScramLoginModule \
+                required username="$(KAFKA_USERNAME)" \
+                password="$(KAFKA_PASSWORD)";'
+      restartPolicy: Always

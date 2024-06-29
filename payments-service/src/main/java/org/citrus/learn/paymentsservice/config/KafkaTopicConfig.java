@@ -16,10 +16,22 @@ public class KafkaTopicConfig {
 	@Value(value = "${spring.kafka.bootstrap-servers}")
 	private String bootstrapAddress;
 
+	@Value(value = "${spring.kafka.security.protocol}")
+	private String kafkaSecurityProtocol;
+
+	@Value(value = "${spring.kafka.sasl.mechanism}")
+	private String saslMechanism;
+
+	@Value(value = "${spring.kafka.sasl.jaas.config}")
+	private String saslJaasConfig;
+
 	@Bean
 	public KafkaAdmin kafkaAdmin() {
 		Map<String, Object> configs = new HashMap<>();
 		configs.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapAddress);
+		configs.put("security.protocol", kafkaSecurityProtocol);
+		configs.put("sasl.mechanism", saslMechanism);
+		configs.put("sasl.jaas.config", saslJaasConfig);
 		return new KafkaAdmin(configs);
 	}
 
