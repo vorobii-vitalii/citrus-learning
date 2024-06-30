@@ -1,0 +1,31 @@
+plugins {
+    id 'java'
+    id 'com.netflix.dgs.codegen' version '6.2.1'
+}
+
+group = 'org.citrus.learn'
+version = 'unspecified'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    implementation 'com.netflix.graphql.dgs:graphql-dgs-extended-scalars'
+}
+
+generateJava {
+    schemaPaths = ["${projectDir}/src/main/resources/graphql"]
+    packageName = 'org.citrus.learn.positionsservice.codegen'
+    generateClient = true
+    typeMapping = [
+            "BigDecimal" : "java.math.BigDecimal",
+    ]
+}
+
+
+test {
+    useJUnitPlatform()
+}

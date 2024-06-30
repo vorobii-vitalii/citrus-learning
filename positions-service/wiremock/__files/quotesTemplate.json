@@ -1,0 +1,8 @@
+[
+  {{#each request.query.symbol as |symbol|}}
+  {
+    "symbol": "{{{symbol}}}",
+    "unitPrice": {{randomDecimal lower=0 upper=100}}
+  },
+  {{/each}}
+]
