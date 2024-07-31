@@ -1,2 +1,4 @@
 rootProject.name = 'citrus-learning'
+include 'positions-service:component-tests'
+findProject(':positions-service:component-tests')?.name = 'component-tests'
 

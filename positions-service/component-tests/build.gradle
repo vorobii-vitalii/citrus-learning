@@ -1,0 +1,79 @@
+plugins {
+    id 'java'
+    id "io.freefair.lombok" version "8.6"
+}
+
+group = 'org.citrus.learn'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+ext {
+    set('netflixDgsVersion', "9.0.0")
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+
+    implementation 'org.projectlombok:lombok:1.18.32'
+
+    // Citrus
+    testImplementation "org.citrusframework:citrus-core:$citrusVersion"
+    testImplementation "org.citrusframework:citrus-junit5:$citrusVersion"
+    testImplementation "org.citrusframework:citrus-groovy:$citrusVersion"
+    testImplementation "org.citrusframework:citrus-http:$citrusVersion"
+
+    // Test containers
+    testImplementation "org.testcontainers:testcontainers:$testContainersVersion"
+    testImplementation "org.testcontainers:junit-jupiter:$testContainersVersion"
+    testImplementation "org.testcontainers:mongodb:$testContainersVersion"
+    testImplementation "org.testcontainers:mockserver:$testContainersVersion"
+
+    // Spring Integration
+    testImplementation "org.springframework.integration:spring-integration-mongodb:6.3.1"
+    implementation 'org.mongodb:mongodb-driver-reactivestreams:5.1.1'
+
+    // Gson
+    implementation 'com.google.code.gson:gson:2.11.0'
+
+    implementation 'com.netflix.graphql.dgs.codegen:graphql-dgs-codegen-shared-core:6.2.1'
+
+    // Mock server API
+    implementation 'org.mock-server:mockserver-client-java:5.15.0'
+
+    // Logging
+    testImplementation 'ch.qos.logback:logback-classic:1.5.6'
+
+    implementation project(":graphql-api")
+    implementation project(":mongo-citrus")
+}
+
+test {
+    exclude '**/*'
+}
+
+tasks.register('componentTests', Test) {
+    description = 'Runs component tests'
+    group = 'verification'
+    include '**/*'
+
+    useJUnitPlatform()
+    testLogging.showStandardStreams = true
+    testLogging.showStackTraces = true
+    testLogging.showExceptions = true
+}

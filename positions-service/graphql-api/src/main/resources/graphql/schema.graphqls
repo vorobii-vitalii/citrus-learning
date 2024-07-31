@@ -1,0 +1,21 @@
+scalar BigDecimal
+
+type Position {
+    symbol: String!
+    quantity: BigDecimal!
+    purchasePrice: BigDecimal!
+    currentPrice: BigDecimal!
+}
+
+input ClientId {
+    id: String!
+}
+
+type PositionDetails {
+    positions: [Position!]!
+    performance: BigDecimal!
+}
+
+type Query {
+    positionDetails(clientId: ClientId!): PositionDetails!
+}

@@ -1,0 +1,8 @@
+elasticsearch:
+  hosts: ['elasticsearch-master']
+  port: 9200
+
+sysctlImage:
+  enabled: true
+global:
+    kibanaEnabled: true

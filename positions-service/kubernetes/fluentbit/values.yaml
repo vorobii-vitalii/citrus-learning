@@ -1,0 +1,23 @@
+
+config:
+  outputs: |
+    [OUTPUT]
+        Name es
+        Match kube.*
+        Host elasticsearch-master
+        Logstash_Format On
+        Logstash_Prefix app
+        Retry_Limit False
+        Replace_Dots    On
+        Suppress_Type_Name On
+        Trace_Error On
+
+    [OUTPUT]
+        Name es
+        Match host.*
+        Host elasticsearch-master
+        Logstash_Format On
+        Logstash_Prefix app
+        Retry_Limit False
+        Replace_Dots On
+        Suppress_Type_Name On

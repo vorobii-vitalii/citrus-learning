@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: positions-service
+  namespace: trading-system
+  labels:
+    app: positions-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: positions-service
+  template:
+    metadata:
+      name: positions-service
+      labels:
+        app: positions-service
+    spec:
+      containers:
+        - name: positions-service
+          image: positions-service:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: MONGO_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: mongodb-root-password
+                  name: mongo-mongodb
+            - name: JAVA_OPTS
+              value: |
+                -Dspring.data.mongodb.uri=mongodb://root:$(MONGO_PASSWORD)@mongo-mongodb.trading-system.svc.cluster.local:27017/test?authSource=admin
+                -Dfinn.hub.api.url=http://wiremock.trading-system.svc.cluster.local:9021/
+                -Ddgs.graphql.graphiql.enabled=false
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+              name: http
+      restartPolicy: Always

@@ -1,0 +1,5 @@
+rootProject.name = 'positions-service'
+include('component-tests')
+include 'graphql-api'
+include 'mongo-citrus'
+
