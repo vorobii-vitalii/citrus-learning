@@ -1,0 +1,79 @@
+version: "3.1"
+services:
+
+  kafka1:
+    image: 'bitnami/kafka:3.3.1'
+    container_name: kafka
+    networks:
+      net:
+    environment:
+      - KAFKA_ENABLE_KRAFT=yes
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka1:9092
+      - KAFKA_CFG_BROKER_ID=1
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka1:9093
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_KRAFT_CLUSTER_ID=r4zt_wrqTRuT7W2NJsB_GA
+    volumes:
+      - volume1:/bitnami/kafka
+
+  kafka-ui:
+    container_name: kafka-ui
+    image: 'provectuslabs/kafka-ui:latest'
+    networks:
+      net:
+    ports:
+      - "8080:8080"
+    environment:
+      - KAFKA_CLUSTERS_0_BOOTSTRAP_SERVERS=kafka1:9092
+      - KAFKA_CLUSTERS_0_NAME=r4zt_wrqTRuT7W2NJsB_GA
+
+  postgres:
+    image: 'postgres:latest'
+    networks:
+      net:
+    environment:
+      - 'POSTGRES_DB=mydatabase'
+      - 'POSTGRES_PASSWORD=secret'
+      - 'POSTGRES_USER=myuser'
+    ports:
+      - '5432:5432'
+
+  liquibase:
+    image: 'liquibase:4.28.0.1'
+    networks:
+      net:
+    depends_on:
+      - postgres
+    volumes:
+      - ./liquibase/:/liquibase/
+    command: --defaults-file=/liquibase/liquibase.properties update
+    environment:
+      LIQUIBASE_COMMAND_URL: jdbc:postgresql://postgres:5432/mydatabase
+      LIQUIBASE_COMMAND_USERNAME: myuser
+      LIQUIBASE_COMMAND_PASSWORD: secret
+
+  payment-service:
+    image: 'docker.io/library/payments-service:0.0.1-SNAPSHOT'
+    environment:
+      JAVA_OPTS: |
+        -Dspring.r2dbc.username=myuser
+        -Dspring.r2dbc.password=secret
+        -Dspring.r2dbc.url=r2dbc:postgresql://postgres:5432/mydatabase
+        -Dspring.sql.init.mode=always
+      KAFKA_BOOTSTRAP_SERVERS: kafka1:9092
+    depends_on:
+      - postgres
+      - kafka1
+      - liquibase
+    networks:
+      net:
+
+volumes:
+  volume1:
+
+networks:
+  net:

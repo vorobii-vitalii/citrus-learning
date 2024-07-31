@@ -1,0 +1,35 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: liquibase-migration
+  namespace: trading-system
+spec:
+  template:
+    spec:
+      volumes:
+        - name: liquibase-config
+          configMap:
+            name: liquibase-config
+      containers:
+        - name: liquibase-migration
+          image: liquibase:latest
+          imagePullPolicy: IfNotPresent
+          args: [ "--defaults-file=/liquibase-cfg/liquibase.properties", "update" ]
+          volumeMounts:
+            - mountPath: /liquibase-cfg/
+              name: liquibase-config
+          env:
+            - name: DATABASE_NAME
+              value: postgres
+            - name: DB_HOST
+              value: postgres-postgresql.trading-system.svc.cluster.local
+            - name: LIQUIBASE_COMMAND_URL
+              value: "jdbc:postgresql://$(DB_HOST):5432/$(DATABASE_NAME)"
+            - name: LIQUIBASE_COMMAND_USERNAME
+              value: postgres
+            - name: LIQUIBASE_COMMAND_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: postgres-password
+                  name: postgres-postgresql
+      restartPolicy: Never
