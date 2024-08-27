@@ -1,0 +1,76 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.3.0'
+    id 'io.spring.dependency-management' version '1.1.5'
+    id 'org.asciidoctor.jvm.convert' version '3.3.2'
+}
+
+group = 'org.citrus.learn'
+archivesBaseName = 'app'
+
+java {
+    sourceCompatibility = '21'
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    set('snippetsDir', file("build/generated-snippets"))
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-data-r2dbc'
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
+    runtimeOnly 'org.postgresql:postgresql'
+    runtimeOnly 'org.postgresql:r2dbc-postgresql'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    testImplementation 'io.projectreactor:reactor-test'
+    testImplementation 'org.springframework.restdocs:spring-restdocs-webtestclient'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    implementation 'com.zaxxer:HikariCP:5.1.0'
+
+    // Citrus
+    testImplementation "org.citrusframework:citrus-core:$citrusVersion"
+    testImplementation "org.citrusframework:citrus-junit5:$citrusVersion"
+    testImplementation "org.citrusframework:citrus-http:$citrusVersion"
+    testImplementation "org.citrusframework:citrus-groovy:$citrusVersion"
+    testImplementation 'com.consol.citrus:citrus-jdbc:3.4.1'
+
+    // Postgres Driver
+    implementation 'org.postgresql:postgresql:42.7.3'
+
+    // Test containers
+    testImplementation "org.testcontainers:testcontainers:$testContainersVersion"
+    testImplementation "org.testcontainers:junit-jupiter:$testContainersVersion"
+    testImplementation "org.testcontainers:postgresql:$testContainersVersion"
+    testImplementation "org.testcontainers:mockserver:$testContainersVersion"
+
+    // Mock server API
+    implementation 'org.mock-server:mockserver-client-java:5.15.0'
+
+}
+
+tasks.named('test') {
+    outputs.dir snippetsDir
+    testLogging.showStandardStreams = true
+    useJUnitPlatform()
+}
+
+tasks.named('asciidoctor') {
+    inputs.dir snippetsDir
+    dependsOn test
+}

@@ -1,0 +1,41 @@
+version: "3.1"
+services:
+  postgres:
+    image: 'postgres:latest'
+    networks:
+      net:
+    environment:
+      - 'POSTGRES_DB=mydatabase'
+      - 'POSTGRES_PASSWORD=secret'
+      - 'POSTGRES_USER=myuser'
+    ports:
+      - '5432:5432'
+  wiremock:
+    image: "wiremock/wiremock:latest"
+    networks:
+      net:
+    ports:
+      - '8081:8080'
+    volumes:
+      - ./wiremock/__files:/home/wiremock/__files
+      - ./wiremock/mappings:/home/wiremock/mappings
+    entrypoint: [ "/docker-entrypoint.sh", "--global-response-templating", "--disable-gzip", "--verbose" ]
+  account-balance-service:
+    environment:
+      JAVA_OPTS: |
+        -Dspring.r2dbc.username=myuser
+        -Dspring.r2dbc.password=secret
+        -Dspring.r2dbc.url=r2dbc:postgresql://postgres:5432/mydatabase
+        -Dspring.sql.init.mode=always
+      RATE_SERVICE_BASE_URL: http://wiremock:8080
+    image: 'docker.io/library/account-balance-service:0.0.1-SNAPSHOT'
+    depends_on:
+      - wiremock
+      - postgres
+    ports:
+      - '8080:8080'
+    networks:
+      net:
+
+networks:
+  net:

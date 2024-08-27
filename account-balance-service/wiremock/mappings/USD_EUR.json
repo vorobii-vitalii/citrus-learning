@@ -1,0 +1,14 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "GET",
+    "urlPattern": "/rates/USD/EUR"
+  },
+  "response": {
+    "status": 200,
+    "body": "{\"rate\": 1.5}",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}
